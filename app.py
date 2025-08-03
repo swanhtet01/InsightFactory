@@ -59,10 +59,6 @@ if 'date' in df.columns:
     df['date'] = pd.to_datetime(df['date'], errors='coerce')
     df = df.drop_duplicates(subset=['date', 'tyre_size']).sort_values('date')
 
-def get_latest_production_data():
-    """Get the latest production data from the data folder"""
-    return load_data()
-
 # --- KPI Metrics ---
 def safe_mean(series):
     return float(series.mean()) if not series.empty else 0

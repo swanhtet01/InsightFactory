@@ -22,6 +22,46 @@ def load_data(data_dir: str = "data") -> pd.DataFrame:
         'a_grade', 'b_grade', 'target', 'scrap', 'production', 'output',
         'efficiency', 'performance', 'quality', 'availability'
     ]
+    
+    try:
+        if not os.path.exists(data_dir):
+            print(f"⚠️ Data directory '{data_dir}' not found")
+            return pd.DataFrame()
+            
+        for fname in os.listdir(data_dir):
+            if fname.endswith('.xlsx'):
+                fpath = os.path.join(data_dir, fname)
+                try:
+                    xl = pd.ExcelFile(fpath)
+                    for sheet in xl.sheet_names:
+                        try:
+                            raw = xl.parse(sheet, header=None)
+                            header_row = find_header_row(raw, header_keywords)
+                            if header_row is not None:
+                                df = xl.parse(sheet, header=header_row)
+                                df = df.dropna(how='all')
+                                df.columns = [re.sub(r'[^\w\d ]+', '', str(col)).strip().lower().replace(' ', '_') for col in df.columns]
+                                # Only keep if at least 2 of the main columns are present
+                                main_cols = set(['date','tyre_size','quantity'])
+                                if main_cols.intersection(set(df.columns)) and len(df) > 0:
+                                    print(f"✅ Loaded {len(df)} rows from {fname} - {sheet}")
+                                    all_dfs.append(df)
+                        except Exception as sheet_error:
+                            print(f"⚠️ Error processing sheet {sheet} in {fname}: {sheet_error}")
+                except Exception as file_error:
+                    print(f"⚠️ Error loading file {fname}: {file_error}")
+                    
+        if not all_dfs:
+            print("⚠️ No valid data found in any Excel files")
+            return pd.DataFrame()
+            
+        df = pd.concat(all_dfs, ignore_index=True)
+        print(f"✅ Successfully loaded {len(df)} total rows of data")
+        return df
+        
+    except Exception as e:
+        print(f"❌ Error loading data: {e}")
+        return pd.DataFrame()
     for fname in os.listdir(data_dir):
         if fname.endswith('.xlsx'):
             fpath = os.path.join(data_dir, fname)
