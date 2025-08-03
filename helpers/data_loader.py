@@ -1,5 +1,3 @@
-def load_data():
-
 """
 Robust data loader for tyre KPI dashboard.
 Scans all .xlsx files in data/, loads all sheets, auto-detects headers, and extracts all relevant tabular data.
@@ -19,7 +17,11 @@ def find_header_row(df: pd.DataFrame, keywords: List[str]) -> int:
 
 def load_data(data_dir: str = "data") -> pd.DataFrame:
     all_dfs = []
-    header_keywords = ['date', 'tyre', 'size', 'qty', 'quantity', 'oee', 'fpy', 'cpk', 'a_grade', 'b_grade', 'target', 'scrap']
+    header_keywords = [
+        'date', 'tyre', 'size', 'qty', 'quantity', 'oee', 'fpy', 'cpk',
+        'a_grade', 'b_grade', 'target', 'scrap', 'production', 'output',
+        'efficiency', 'performance', 'quality', 'availability'
+    ]
     for fname in os.listdir(data_dir):
         if fname.endswith('.xlsx'):
             fpath = os.path.join(data_dir, fname)

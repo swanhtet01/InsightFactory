@@ -12,6 +12,29 @@ from config import TRANSLATIONS
 # Start GitHub sync in background
 github_manager = start_github_sync()
 
+# Add monitoring thread for autonomous optimization
+import threading
+def monitor_dashboard():
+    import time
+    while True:
+        # Load latest data
+        latest_df = get_latest_production_data()
+        if not latest_df.empty:
+            # Log metrics to status.log
+            metrics = {
+                'timestamp': datetime.now().isoformat(),
+                'data_rows': len(latest_df),
+                'last_update': latest_df['date'].max(),
+                'kpis_present': list(latest_df.columns),
+                'health': 'good' if len(latest_df) > 0 else 'warning'
+            }
+            with open('status.log', 'a') as f:
+                f.write(f"[{datetime.now().isoformat()}] Dashboard metrics: {metrics}\n")
+        time.sleep(300)  # Check every 5 minutes
+
+monitor_thread = threading.Thread(target=monitor_dashboard, daemon=True)
+monitor_thread.start()
+
 st.set_page_config(page_title="Tyre Factory KPI Dashboard", layout="wide")
 st.title("📊 Tyre Factory KPI Dashboard")
 
