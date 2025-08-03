@@ -1,0 +1,18 @@
+[
+  {
+    "file": "Weekly Tyre 20225.xlsx",
+    "error": "Error processing Weekly Tyre 20225.xlsx: local variable 'best_sheet' referenced before assignment"
+  },
+  {
+    "file": "Daily Pro; A,B,R Report .xlsx",
+    "error": "Error processing Daily Pro; A,B,R Report .xlsx: local variable 'best_sheet' referenced before assignment"
+  },
+  {
+    "file": "processed_data.json",
+    "error": "Unsupported file type: .json"
+  },
+  {
+    "file": "1.  Tyre PD ; A.B.R ( 2025) year ).xlsx",
+    "error": "Error processing 1.  Tyre PD ; A.B.R ( 2025) year ).xlsx: local variable 'best_sheet' referenced before assignment"
+  }
+]

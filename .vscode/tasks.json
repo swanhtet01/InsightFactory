@@ -1,0 +1,12 @@
+{
+	"version": "2.0.0",
+	"tasks": [
+		{
+			"type": "shell",
+			"label": "Run Streamlit KPI Dashboard",
+			"command": "/home/swanhtet/InsightFactory/venv/bin/python -m streamlit run pages/1_📊_KPI_Dashboard.py",
+			"group": "build",
+			"isBackground": false
+		}
+	]
+}

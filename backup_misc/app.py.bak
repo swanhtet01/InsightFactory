@@ -1,0 +1,169 @@
+"""
+Simple Tyre Production Dashboard
+"""
+import streamlit as st
+import pandas as pd
+import plotly.express as px
+import plotly.graph_objects as go
+from datetime import datetime, timedelta
+import os
+from helpers.data_processor import get_latest_production_data
+
+# Page config
+st.set_page_config(
+    page_title="Tyre Production Dashboard",
+    page_icon="📊",
+    layout="wide"
+)oduction Dashboard
+"""
+import streamlit as st
+import pandas as pd
+import plotly.express as px
+import plotly.graph_objects as go
+from datetime import datetime, timedelta
+import os
+from helpers.drive_watcher import get_drive_service, get_latest_files
+from helpers.analyze_folder import analyze_data_folder
+from helpers.excel_processor import process_excel_file
+
+# Page config
+st.set_page_config(
+    page_title="Tyre Production Dashboard",
+    page_icon="📊",
+    layout="wide"
+)
+
+# Custom CSS
+st.markdown("""
+    <style>
+        .kpi-card {
+            background-color: #f0f2f6;
+            border-radius: 10px;
+            padding: 20px;
+            text-align: center;
+            box-shadow: 2px 2px 5px rgba(0,0,0,0.1);
+        }
+        .kpi-value { font-size: 24px; font-weight: bold; }
+        .kpi-label { font-size: 14px; color: #666; }
+        .trend-up { color: #28a745; }
+        .trend-down { color: #dc3545; }
+    </style>
+""", unsafe_allow_html=True)
+
+def format_number(num):
+    """Format large numbers for display"""
+    if num >= 1000000:
+        return f"{num/1000000:.1f}M"
+    elif num >= 1000:
+        return f"{num/1000:.1f}K"
+    return f"{num:.0f}"
+
+def main():
+    st.title("🏭 Tyre Production Dashboard")
+    
+    # Sync latest data
+    with st.spinner("Syncing latest data..."):
+        analyze_data_folder(use_cache=False)
+    
+    # Date filters
+    col1, col2 = st.columns(2)
+    with col1:
+        date_range = st.selectbox(
+            "Time Period",
+            ["Last 24 Hours", "Last 7 Days", "Last 30 Days", "This Month", "This Year"]
+        )
+    
+    # Load and process data
+    try:
+        if os.path.exists("data/processed_data.json"):
+            df = pd.read_json("data/processed_data.json")
+            if 'timestamp' not in df.columns and 'date' in df.columns:
+                df['timestamp'] = pd.to_datetime(df['date'])
+            df = df.sort_values('timestamp')
+        else:
+            df = None
+            st.error("No processed data found. Please check data sources.")
+            return
+    except Exception as e:
+        st.error(f"Error loading data: {str(e)}")
+        df = None
+        return
+    
+    # Top KPIs
+    st.subheader("Production Overview")
+    
+    if df is not None and not df.empty:
+        total_production = df['quantity'].sum() if 'quantity' in df.columns else 0
+        quality_rate = (df['quality_rate'].mean() * 100 if 'quality_rate' in df.columns 
+                       else 100 - (df['defects'].sum() / df['quantity'].sum() * 100 if 'defects' in df.columns else 0))
+        efficiency = (df['efficiency'].mean() * 100 if 'efficiency' in df.columns else 
+                     df['quantity'].sum() / df['target'].sum() * 100 if 'target' in df.columns else 0)
+        
+        col1, col2, col3 = st.columns(3)
+        
+        with col1:
+            st.markdown(f"""
+                <div class="kpi-card">
+                    <div class="kpi-value">{format_number(total_production)}</div>
+                    <div class="kpi-label">Total Production</div>
+                </div>
+            """, unsafe_allow_html=True)
+        
+        with col2:
+            st.markdown(f"""
+                <div class="kpi-card">
+                    <div class="kpi-value">{quality_rate:.1f}%</div>
+                    <div class="kpi-label">Quality Rate</div>
+                </div>
+            """, unsafe_allow_html=True)
+        
+        with col3:
+            st.markdown(f"""
+                <div class="kpi-card">
+                    <div class="kpi-value">{efficiency:.1f}%</div>
+                    <div class="kpi-label">Efficiency</div>
+                </div>
+            """, unsafe_allow_html=True)
+    else:
+        st.warning("No production data available. Please check data sources.")
+    
+    # Production Trend
+    st.subheader("Production Trend")
+    fig = px.line(
+        df, 
+        x='timestamp', 
+        y='total_production',
+        title="Hourly Production Output"
+    )
+    st.plotly_chart(fig, use_container_width=True)
+    
+    if df is not None and not df.empty:
+        # Quality and Efficiency Metrics
+        col1, col2 = st.columns(2)
+        
+        with col1:
+            st.subheader("Daily Production")
+            daily_prod = df.groupby(df['timestamp'].dt.date)['quantity'].sum().reset_index()
+            fig = px.bar(daily_prod, x='timestamp', y='quantity',
+                        title="Daily Production Quantity")
+            st.plotly_chart(fig, use_container_width=True)
+        
+        with col2:
+            st.subheader("Quality Trend")
+            if 'quality_rate' in df.columns:
+                daily_quality = df.groupby(df['timestamp'].dt.date)['quality_rate'].mean().reset_index()
+                fig = px.line(daily_quality, x='timestamp', y='quality_rate',
+                            title="Quality Rate Trend")
+                fig.update_layout(yaxis_range=[0, 1])
+                st.plotly_chart(fig, use_container_width=True)
+        
+        # Data Info
+        st.sidebar.title("Dashboard Info")
+        st.sidebar.markdown(f"Last Updated: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
+        st.sidebar.markdown("Data Files:")
+        for file in os.listdir('data'):
+            if file.endswith(('.xlsx', '.csv', '.json')):
+                st.sidebar.markdown(f"- {file}")
+
+if __name__ == "__main__":
+    main()

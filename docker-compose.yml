@@ -1,0 +1,14 @@
+version: '3'
+services:
+  dashboard:
+    image: python:3.10-slim
+    working_dir: /app
+    volumes:
+      - ./:/app
+    ports:
+      - "8501:8501"
+    environment:
+      - STREAMLIT_SERVER_PORT=8501
+      - STREAMLIT_SERVER_ADDRESS=0.0.0.0
+    command: bash -c "pip install --upgrade pip && pip install -r requirements.txt && apt-get update && apt-get install -y tesseract-ocr && streamlit run app.py"
+    restart: unless-stopped

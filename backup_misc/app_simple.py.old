@@ -1,0 +1,403 @@
+"""
+Simple Tyre Production Dashboard with AI Insights
+"""
+import streamlit as st
+import pandas as pd
+import plotly.express as px
+from pathlib import Path
+from datetime import datetime, timedelta
+
+# Page config
+st.set_page_config(
+    page_title="Tyre Production Dashboard",
+    page_icon="🏭",
+    layout="wide"
+)
+
+# Custom CSS for metrics and cards
+st.markdown("""
+    <style>
+        .metric-card {
+            background-color: #f0f2f6;
+            border-radius: 10px;
+            padding: 20px;
+            text-align: center;
+            margin: 10px 0;
+        }
+        .metric-value {
+            font-size: 24px;
+            font-weight: bold;
+            color: #0068c9;
+        }
+        .metric-label {
+            font-size: 16px;
+            color: #555;
+            margin-top: 5px;
+        }
+        .trend-up {
+            color: #28a745;
+            font-size: 12px;
+        }
+        .trend-down {
+            color: #dc3545;
+            font-size: 12px;
+        }
+    </style>
+""", unsafe_allow_html=True)
+
+def detect_columns(df):
+    """Intelligently detect date and quantity columns"""
+    # Common patterns in column names
+    date_patterns = ['date', 'day', 'period', 'time', 'month', 'year', '日', '月']
+    qty_patterns = ['qty', 'quantity', 'production', 'output', 'volume', 'total', 'count', 
+                   'pcs', 'number', 'num', 'amount', '数量', '生産', 'prod', 'tyre']
+    
+    best_date_col = None
+    best_qty_col = None
+    max_date_score = 0
+    max_qty_score = 0
+    
+    for col in df.columns:
+        col_str = str(col).lower()
+        
+        # Score for date column
+        date_score = 0
+        if any(pattern in col_str for pattern in date_patterns):
+            date_score += 5
+        try:
+            test_dates = pd.to_datetime(df[col], errors='coerce')
+            valid_ratio = test_dates.notna().sum() / len(df)
+            date_score += valid_ratio * 10
+            if valid_ratio > 0.5 and date_score > max_date_score:
+                max_date_score = date_score
+                best_date_col = col
+        except:
+            pass
+        
+        # Score for quantity column
+        qty_score = 0
+        if any(pattern in col_str for pattern in qty_patterns):
+            qty_score += 5
+        try:
+            values = pd.to_numeric(df[col], errors='coerce')
+            valid_ratio = values.notna().sum() / len(df)
+            if valid_ratio > 0.5 and values.min() >= 0:  # Only non-negative values
+                qty_score += valid_ratio * 10
+                if qty_score > max_qty_score:
+                    max_qty_score = qty_score
+                    best_qty_col = col
+        except:
+            pass
+    
+    return best_date_col, best_qty_col
+
+def load_data():
+    """Load and process data from Excel files with smart detection"""
+    data_dir = Path("data")
+    if not data_dir.exists():
+        st.error("Data directory not found")
+        return pd.DataFrame()
+    
+    # Get Excel files sorted by modification time
+    excel_files = []
+    progress_text = "Scanning Excel files..."
+    progress_bar = st.progress(0.0, text=progress_text)
+    
+    try:
+        for f in data_dir.glob("*.xlsx"):
+            try:
+                # Test if file is readable
+                pd.ExcelFile(f)
+                excel_files.append((f, f.stat().st_mtime))
+            except Exception as e:
+                st.warning(f"⚠️ Skipping {f.name}: Could not read file ({str(e)})")
+    finally:
+        progress_bar.empty()
+    
+    if not excel_files:
+        st.error("❌ No valid Excel files found")
+        return pd.DataFrame()
+    
+    # Sort by modification time and get latest files
+    excel_files.sort(key=lambda x: x[1], reverse=True)
+    latest_files = excel_files[:2]
+    
+    st.info("📋 Found latest files:")
+" + "
+".join(f"- {f[0].name}" for f in latest_files))
+    
+    combined_data = pd.DataFrame()
+    file_progress = st.progress(0.0)
+    status_text = st.empty()
+    
+    for idx, (filepath, _) in enumerate(latest_files):
+        try:
+            progress = (idx + 0.5) / len(latest_files)
+            file_progress.progress(progress, text=f"Processing {filepath.name}...")
+            
+            # Try each sheet in the Excel file
+            xl = pd.ExcelFile(filepath)
+            file_data = None
+            max_rows = 0    combined_data = pd.DataFrame()
+    total_records = 0
+    
+    with st.expander("🔍 Data Processing Details", expanded=False):
+        for filepath, _ in latest_files:
+            try:
+                # Read all sheets
+                xl = pd.ExcelFile(filepath)
+                best_data = None
+                max_rows = 0
+                
+                st.text(f"Processing {filepath.name}...")
+                for sheet in xl.sheet_names:
+                    try:
+                        df = pd.read_excel(filepath, sheet_name=sheet)
+                        if df.empty:
+                            st.text(f"  - Sheet '{sheet}' is empty, skipping...")
+                            continue
+                    
+                    # Try to find date column
+                    date_col = None
+                    for col in df.columns:
+                        try:
+                            test_dates = pd.to_datetime(df[col], errors='coerce')
+                            if test_dates.notna().sum() > len(df) * 0.5:  # At least 50% valid dates
+                                date_col = col
+                                df[col] = test_dates
+                                break
+                        except:
+                            continue
+                    
+                    if not date_col:
+                        continue
+                    
+                    # Try to find quantity column
+                    qty_col = None
+                    for col in df.columns:
+                        if col == date_col:
+                            continue
+                        try:
+                            values = pd.to_numeric(df[col], errors='coerce')
+                            if values.notna().sum() > len(df) * 0.5:  # At least 50% valid numbers
+                                if values.min() >= 0:  # Only accept non-negative numbers
+                                    qty_col = col
+                                    df[col] = values
+                                    break
+                        except:
+                            continue
+                    
+                    if date_col and qty_col:
+                        temp_df = df[[date_col, qty_col]].copy()
+                        temp_df.columns = ['date', 'quantity']
+                        temp_df = temp_df.dropna()
+                        
+                        if len(temp_df) > max_rows:
+                            max_rows = len(temp_df)
+                            best_data = temp_df
+                
+                except Exception as e:
+                    st.text(f"Error in sheet {sheet}: {str(e)}")
+                    continue
+            
+            if best_data is not None:
+                if combined_data.empty:
+                    combined_data = best_data
+                else:
+                    combined_data = pd.concat([combined_data, best_data])
+                st.success(f"Processed {filepath.name}: found {len(best_data)} records")
+            else:
+                st.warning(f"No valid data found in {filepath.name}")
+        
+        except Exception as e:
+            st.error(f"Error processing {filepath.name}: {str(e)}")
+            continue
+    
+    if combined_data.empty:
+        return pd.DataFrame()
+    
+    # Clean up and sort
+    combined_data = combined_data.sort_values('date')
+    combined_data = combined_data.drop_duplicates()
+    return combined_data
+
+def calculate_trend(current, previous):
+    if not previous:
+        return 0
+    return ((current - previous) / previous) * 100
+
+def analyze_trends(df):
+    """Generate AI insights from the data"""
+    insights = []
+    
+    # Analyze daily pattern
+    daily_data = df.groupby(df['date'].dt.date)['quantity'].sum()
+    
+    # Check for significant changes
+    pct_change = daily_data.pct_change()
+    significant_changes = pct_change[abs(pct_change) > 0.20]  # 20% change
+    if not significant_changes.empty:
+        for date, change in significant_changes.items():
+            direction = "increase" if change > 0 else "decrease"
+            insights.append(f"📊 Notable {direction} of {abs(change):.1%} in production on {date.strftime('%Y-%m-%d')}")
+    
+    # Check for production records
+    max_production = daily_data.max()
+    max_date = daily_data.idxmax()
+    if max_date >= (pd.Timestamp.now() - pd.Timedelta(days=7)):
+        insights.append(f"� Recent production record: {max_production:,.0f} units on {max_date.strftime('%Y-%m-%d')}")
+    
+    # Analyze weekly pattern
+    weekly_avg = df.groupby(df['date'].dt.isocalendar().week)['quantity'].mean()
+    week_trend = weekly_avg.pct_change().mean()
+    if abs(week_trend) > 0.05:
+        direction = "increasing" if week_trend > 0 else "decreasing"
+        insights.append(f"📈 Weekly production is {direction} by {abs(week_trend):.1%} on average")
+    
+    return insights
+
+def main():
+    st.title("�🏭 Tyre Production Dashboard")
+    
+    # Load data
+    with st.spinner("Loading and analyzing production data..."):
+        df = load_data()
+    
+    if df.empty:
+        st.error("""
+        No valid data available. Please check:
+        1. Excel files are in the data/ directory
+        2. Files contain date and quantity columns
+        3. Files are not corrupted
+        """)
+        return
+    
+    # Show AI Insights
+    if len(df) > 0:
+        insights = analyze_trends(df)
+        if insights:
+            with st.expander("🤖 AI Insights", expanded=True):
+                for insight in insights:
+                    st.write(insight)
+    
+    # Date filter
+    col1, col2 = st.columns([2,1])
+    with col1:
+        timeframe = st.selectbox(
+            "Select Timeframe",
+            ["Last 7 Days", "Last 30 Days", "This Month", "All Time"]
+        )
+        
+        end_date = pd.Timestamp.now().normalize()
+        if timeframe == "Last 7 Days":
+            start_date = end_date - pd.Timedelta(days=7)
+        elif timeframe == "Last 30 Days":
+            start_date = end_date - pd.Timedelta(days=30)
+        elif timeframe == "This Month":
+            start_date = end_date.replace(day=1)
+        else:
+            start_date = df['date'].min()
+        
+        filtered_df = df[(df['date'] >= start_date) & (df['date'] <= end_date)]
+    
+    # Key metrics
+    col1, col2, col3 = st.columns(3)
+    
+    with col1:
+        total_prod = filtered_df['quantity'].sum()
+        # Calculate previous period
+        prev_start = start_date - (end_date - start_date)
+        prev_df = df[(df['date'] >= prev_start) & (df['date'] < start_date)]
+        prev_total = prev_df['quantity'].sum()
+        trend = calculate_trend(total_prod, prev_total)
+        
+        trend_html = f"""
+        <div class='{"trend-up" if trend >= 0 else "trend-down"}'>
+            {f"▲ {trend:.1f}%" if trend >= 0 else f"▼ {abs(trend):.1f}%"}
+        </div>
+        """ if prev_total else ""
+        
+        st.markdown(
+            f"""<div class="metric-card">
+                <div class="metric-value">{total_prod:,.0f}</div>
+                <div class="metric-label">Total Production</div>
+                {trend_html}
+            </div>""", 
+            unsafe_allow_html=True
+        )
+    
+    with col2:
+        daily_avg = filtered_df.groupby(filtered_df['date'].dt.date)['quantity'].sum().mean()
+        prev_daily = prev_df.groupby(prev_df['date'].dt.date)['quantity'].sum().mean() if not prev_df.empty else 0
+        trend = calculate_trend(daily_avg, prev_daily)
+        
+        trend_html = f"""
+        <div class='{"trend-up" if trend >= 0 else "trend-down"}'>
+            {f"▲ {trend:.1f}%" if trend >= 0 else f"▼ {abs(trend):.1f}%"}
+        </div>
+        """ if prev_daily else ""
+        
+        st.markdown(
+            f"""<div class="metric-card">
+                <div class="metric-value">{daily_avg:,.0f}</div>
+                <div class="metric-label">Daily Average</div>
+                {trend_html}
+            </div>""", 
+            unsafe_allow_html=True
+        )
+    
+    with col3:
+        latest_day = filtered_df['date'].max()
+        latest_prod = filtered_df[filtered_df['date'].dt.date == latest_day.date()]['quantity'].sum()
+        prev_day = latest_day - timedelta(days=1)
+        prev_prod = df[df['date'].dt.date == prev_day.date()]['quantity'].sum()
+        trend = calculate_trend(latest_prod, prev_prod)
+        
+        trend_html = f"""
+        <div class='{"trend-up" if trend >= 0 else "trend-down"}'>
+            {f"▲ {trend:.1f}%" if trend >= 0 else f"▼ {abs(trend):.1f}%"}
+        </div>
+        """ if prev_prod else ""
+        
+        st.markdown(
+            f"""<div class="metric-card">
+                <div class="metric-value">{latest_prod:,.0f}</div>
+                <div class="metric-label">Latest Day Production</div>
+                {trend_html}
+            </div>""", 
+            unsafe_allow_html=True
+        )
+    
+    # Production trend
+    st.subheader("Daily Production Trend")
+    
+    daily_data = filtered_df.groupby(filtered_df['date'].dt.date).agg({
+        'quantity': ['sum', 'count']
+    }).reset_index()
+    daily_data.columns = ['date', 'total_quantity', 'records']
+    
+    fig = px.line(daily_data, x='date', y='total_quantity',
+                 title='Daily Production',
+                 labels={'date': 'Date', 'total_quantity': 'Production'})
+    fig.update_traces(line_color='#0068c9', line_width=2)
+    
+    # Add moving average
+    ma_window = 7 if len(daily_data) >= 14 else 3
+    daily_data['MA7'] = daily_data['total_quantity'].rolling(window=ma_window).mean()
+    fig.add_scatter(x=daily_data['date'], y=daily_data['MA7'],
+                   name=f'{ma_window}-day Moving Average',
+                   line=dict(color='#ff9f1c', width=1, dash='dash'))
+    
+    st.plotly_chart(fig, use_container_width=True)
+    
+    # Data table
+    with st.expander("View Daily Production Data"):
+        display_df = daily_data[['date', 'total_quantity', 'records']].copy()
+        display_df.columns = ['Date', 'Total Production', 'Number of Records']
+        st.dataframe(
+            display_df.sort_values('Date', ascending=False),
+            use_container_width=True
+        )
+
+if __name__ == "__main__":
+    main()

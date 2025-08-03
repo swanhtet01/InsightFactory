@@ -1,0 +1,89 @@
+# Portal Configuration
+app_title: "Tyre Production KPI Dashboard"
+app_description: "Real-time monitoring of production KPIs with data validation"
+
+# Data Sources
+data_sources:
+  excel:
+    daily_pattern: "*Daily*.xlsx"
+    weekly_pattern: "*Weekly*.xlsx"
+    year_pattern: "*year*.xlsx"
+  images:
+    base_path: "data/images/2025"
+    daily_path: "daily"
+    weekly_path: "weekly"
+    monthly_path: "monthly"
+  validation:
+    max_variance: 10  # Maximum allowed variance (%) between Excel and image data
+    min_confidence: 0.8  # Minimum OCR confidence score to accept image data
+
+# Dashboard Settings
+dashboard:
+  refresh_interval: 300  # Auto-refresh interval in seconds
+  theme: "streamlit"
+  language:
+    default: "en"
+    supported: ["en", "my"]  # English and Burmese
+  metrics:
+    - name: "Total Production"
+      unit: "pcs"
+      change_period: "prev_day"
+    - name: "Quality Rate"
+      unit: "%"
+      target: 98.5
+    - name: "Target Achievement"
+      unit: "%"
+      target: 100
+    - name: "OEE"
+      unit: "%"
+      target: 85
+
+# Security
+security:
+  require_auth: true
+  session_expiry: 8  # Hours
+  allowed_users:
+    - username: "admin"
+      password: "admin"  # Replace with secure password in production
+    - username: "viewer"
+      password: "viewer"  # Replace with secure password in production
+
+# Notifications
+notifications:
+  enabled: true
+  threshold_alerts:
+    quality_rate: 95  # Alert if quality rate falls below 95%
+    target_achievement: 90  # Alert if target achievement falls below 90%
+  channels:
+    email: false  # Email notifications disabled by default
+    browser: true  # Browser notifications enabled
+
+# Logging
+logging:
+  level: "INFO"
+  file: "portal.log"
+  max_size: 10  # MB
+  backup_count: 5
+session_expiry: 8  # hours
+max_login_attempts: 5
+ip_whitelist:
+  - "192.168.1.0/24"  # Office network
+  - "10.0.0.0/8"      # VPN network
+
+# Data Settings
+data_refresh_interval: 15  # minutes
+data_sources:
+  excel_files:
+    weekly: "data/Weekly Tyre 20225.xlsx"
+    daily: "data/Daily Pro; A,B,R Report .xlsx"
+    yearly: "data/1.  Tyre PD ; A.B.R ( 2025) year ).xlsx"
+  image_paths:
+    base: "data/images/2025"
+    weekly: "data/images/2025/weekly"
+    daily: "data/images/2025/daily"
+    monthly: "data/images/2025/monthly"
+  validation:
+    use_image_data: true    # Enable image data validation
+    cross_check: true       # Cross-check Excel vs Image data
+    max_variance: 10        # Maximum allowed variance percentage
+    require_match: false    # Continue if no matching image found
