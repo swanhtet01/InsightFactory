@@ -9,6 +9,11 @@ from helpers.github_uploader import start_github_sync
 from helpers.kpi_engine import KPIAgent
 from config import TRANSLATIONS
 
+# Functions
+def get_latest_production_data():
+    """Get the latest production data from the data folder"""
+    return load_data()
+
 # Start GitHub sync in background
 github_manager = start_github_sync()
 
@@ -24,7 +29,7 @@ def monitor_dashboard():
             metrics = {
                 'timestamp': datetime.now().isoformat(),
                 'data_rows': len(latest_df),
-                'last_update': latest_df['date'].max(),
+                'last_update': latest_df['date'].max().strftime('%Y-%m-%d %H:%M:%S'),
                 'kpis_present': list(latest_df.columns),
                 'health': 'good' if len(latest_df) > 0 else 'warning'
             }
