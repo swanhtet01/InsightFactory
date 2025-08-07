@@ -3,86 +3,94 @@ KPI computation engine for tyre production data.
 """
 import pandas as pd
 import numpy as np
-from datetime import datetime, timedelta
+from datetime import datetime
 
 class KPIAgent:
-    def __init__(self):
-        """Initialize KPI Agent"""
+    def __init__(self, df: pd.DataFrame):
+        """
+        Initialize KPI Agent with the dataframe to be analyzed.
+        Args:
+            df (pd.DataFrame): The production data.
+        """
+        self.df = df.copy()
         self.metrics_history = []
-        
-    def engineer_features(self, df: pd.DataFrame) -> pd.DataFrame:
+        self.kpis = {}
+
+    def engineer_features(self):
         """Add engineered features for advanced analytics."""
+        if self.df.empty:
+            return
+
         try:
-            df = df.copy()
-            if 'date' in df.columns:
-                df['hour_of_day'] = df['date'].dt.hour
-                df['day_of_week'] = df['date'].dt.dayofweek
-                df['is_weekend'] = df['date'].dt.weekday.isin([5, 6]).astype(int)
+            if 'date' in self.df.columns:
+                self.df['hour_of_day'] = pd.to_datetime(self.df['date']).dt.hour
+                self.df['day_of_week'] = pd.to_datetime(self.df['date']).dt.dayofweek
+                self.df['is_weekend'] = self.df['day_of_week'].isin([5, 6]).astype(int)
             
-            # Production efficiency features
-            if 'quantity' in df.columns and 'target' in df.columns:
-                df['output_efficiency'] = df['quantity'] / df['target']
-                df['output_variance'] = df['quantity'] - df['target']
+            if 'quantity' in self.df.columns and 'target' in self.df.columns:
+                # Use .loc to avoid SettingWithCopyWarning
+                self.df.loc[:, 'output_efficiency'] = self.df['quantity'] / self.df['target']
+                self.df.loc[:, 'output_variance'] = self.df['quantity'] - self.df['target']
             
-            # Quality features
-            if 'a_grade' in df.columns and 'b_grade' in df.columns:
-                df['total_production'] = df['a_grade'] + df['b_grade']
-                df['quality_score'] = df['a_grade'] / df['total_production']
+            if 'a_grade' in self.df.columns and 'b_grade' in self.df.columns:
+                self.df.loc[:, 'total_production'] = self.df['a_grade'] + self.df['b_grade']
+                self.df.loc[:, 'quality_score'] = self.df['a_grade'] / self.df['total_production']
             
-            # Moving averages and trends
-            numeric_cols = df.select_dtypes(include=[np.number]).columns
+            numeric_cols = self.df.select_dtypes(include=np.number).columns
             for col in numeric_cols:
-                df[f'{col}_ma7'] = df[col].rolling(window=7).mean()
-                df[f'{col}_ma30'] = df[col].rolling(window=30).mean()
-                df[f'{col}_trend'] = df[col].diff()
-            
-            return df
+                self.df.loc[:, f'{col}_ma7'] = self.df[col].rolling(window=7).mean()
+                self.df.loc[:, f'{col}_ma30'] = self.df[col].rolling(window=30).mean()
+
         except Exception as e:
             print(f"Error engineering features: {e}")
-            return df
-            
-    def compute_kpis(self, df: pd.DataFrame) -> dict:
+
+    def compute_kpis(self):
         """
-        Compute key manufacturing KPIs from cleaned dataframe.
-        Args:
-            df (pd.DataFrame): Cleaned production data.
-        Returns:
-            dict: KPI metrics with current and historical trends.
+        Compute key manufacturing KPIs from the dataframe.
         """
-        if df.empty:
-            return {
-                'oee': 0,
-                'fpy': 0,
-                'quality_rate': 0,
-                'scrap_rate': 0,
-                'production': 0,
-                'target': 0,
-                'target_achievement': 0
+        if self.df.empty:
+            self.kpis = {
+                'oee': 0, 'fpy': 0, 'quality_rate': 0, 'scrap_rate': 0,
+                'production': 0, 'target': 0, 'target_achievement': 0
             }
-            
-        # Add engineered features
-        df = self.engineer_features(df)
+            return
+
+        self.engineer_features()
         
-        # Calculate basic KPIs
         kpis = {}
-        kpis['oee'] = df['oee'].mean() if 'oee' in df.columns else 0
-        kpis['fpy'] = df['fpy'].mean() if 'fpy' in df.columns else 0
-        kpis['production'] = df['quantity'].sum() if 'quantity' in df.columns else 0
-        kpis['target'] = df['target'].sum() if 'target' in df.columns else 0
+        kpis['oee'] = self.df['oee'].mean() if 'oee' in self.df.columns else 0
+        kpis['fpy'] = self.df['fpy'].mean() if 'fpy' in self.df.columns else 0
+        kpis['production'] = self.df['quantity'].sum() if 'quantity' in self.df.columns else 0
+        kpis['target'] = self.df['target'].sum() if 'target' in self.df.columns else 0
         kpis['target_achievement'] = (kpis['production'] / kpis['target'] * 100) if kpis['target'] > 0 else 0
         
-        if 'a_grade' in df.columns and 'b_grade' in df.columns:
-            total_graded = df['a_grade'].sum() + df['b_grade'].sum()
-            kpis['quality_rate'] = (df['a_grade'].sum() / total_graded * 100) if total_graded > 0 else 0
+        if 'a_grade' in self.df.columns and 'b_grade' in self.df.columns:
+            total_graded = self.df['a_grade'].sum() + self.df['b_grade'].sum()
+            kpis['quality_rate'] = (self.df['a_grade'].sum() / total_graded * 100) if total_graded > 0 else 0
         else:
             kpis['quality_rate'] = 0
             
-        kpis['scrap_rate'] = (df['scrap'].sum() / kpis['production'] * 100) if 'scrap' in df.columns and kpis['production'] > 0 else 0
+        kpis['scrap_rate'] = (self.df['scrap'].sum() / kpis['production'] * 100) if 'scrap' in self.df.columns and kpis['production'] > 0 else 0
         
-        # Store metrics history
-        self.metrics_history.append({
-            'timestamp': datetime.now(),
-            'metrics': kpis
-        })
-        
-        return kpis
+        self.kpis = kpis
+        self.metrics_history.append({'timestamp': datetime.now(), 'metrics': self.kpis})
+
+    def summary(self) -> str:
+        """
+        Generates a text summary of the computed KPIs.
+        """
+        if not self.kpis:
+            self.compute_kpis()
+
+        summary_str = (
+            f"Key Performance Indicators:\n"
+            f"---------------------------\n"
+            f"Overall Equipment Effectiveness (OEE): {self.kpis.get('oee', 0):.2f}%\n"
+            f"First Pass Yield (FPY): {self.kpis.get('fpy', 0):.2f}%\n"
+            f"Total Production: {self.kpis.get('production', 0):,.0f} units\n"
+            f"Target Achievement: {self.kpis.get('target_achievement', 0):.2f}%\n"
+            f"A-Grade Quality Rate: {self.kpis.get('quality_rate', 0):.2f}%\n"
+            f"Scrap Rate: {self.kpis.get('scrap_rate', 0):.2f}%\n"
+            f"---------------------------"
+        )
+        return summary_str
