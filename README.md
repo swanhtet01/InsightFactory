@@ -7,6 +7,9 @@ A modern, robust KPI dashboard for tyre production analytics. All data is loaded
 - Advanced analytics and anomaly detection
 - Minimal, modern UI (only key KPIs and trends)
 - Modular codebase: data loading, KPI engine, quality checker, and Drive sync are separated for maintainability
+- Background watcher keeps local data synced with Drive (Excel & PNG files)
+- Handles multiple data granularities; raw spreadsheets and image assets are stored for downstream analysis
+- Automatic KPI computation after each sync with results stored in `reports/latest_kpis.csv`
 
 ## Folder Structure
 - `app.py` — Main entry point
@@ -19,9 +22,11 @@ A modern, robust KPI dashboard for tyre production analytics. All data is loaded
 
 ## Usage
 1. Place your Google Drive credentials in `credentials.json`.
-2. Run the app: `streamlit run app.py`
-3. All analytics are auto-updated from your Drive folder.
+2. Start the Drive watcher: `python helpers/drive_watcher.py` (runs continuously and computes KPIs)
+3. Run the app: `streamlit run app.py`
+4. All analytics are auto-updated from your Drive folder and KPI results are saved to `reports/latest_kpis.csv`.
 
 ## Maintenance
 - Only keep files and modules listed above. Remove legacy/unused files for clarity.
 - For help, contact your analytics team.
+- Continuous integration runs `python -m py_compile` on key helpers for reliability (see `.github/workflows/ci.yml`).

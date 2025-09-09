@@ -5,6 +5,8 @@ from googleapiclient.errors import HttpError
 from google_auth_oauthlib.flow import InstalledAppFlow
 from google.auth.transport.requests import Request
 from typing import List, Dict
+import io
+from googleapiclient.http import MediaIoBaseDownload
 
 SCOPES = ['https://www.googleapis.com/auth/drive.metadata.readonly',
           'https://www.googleapis.com/auth/drive.readonly']
@@ -26,14 +28,17 @@ def get_drive_service():
             pickle.dump(creds, token)
     return build('drive', 'v3', credentials=creds)
 
-def list_excel_files_in_folder(folder_id: str) -> List[Dict]:
-    """List Excel files in a Google Drive folder, sorted by last modified."""
+def list_files_in_folder(folder_id: str, mime_types: List[str]) -> List[Dict]:
+    """List files in a Google Drive folder matching given MIME types."""
     service = get_drive_service()
-    query = f"'{folder_id}' in parents and (mimeType='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' or mimeType='application/vnd.ms-excel') and trashed=false"
-    results = service.files().list(q=query,
-                                   spaces='drive',
-                                   fields="files(id, name, modifiedTime, owners, lastModifyingUser)",
-                                   orderBy="modifiedTime desc").execute()
+    mime_query = " or ".join([f"mimeType='{m}'" for m in mime_types])
+    query = f"'{folder_id}' in parents and ({mime_query}) and trashed=false"
+    results = service.files().list(
+        q=query,
+        spaces='drive',
+        fields="files(id, name, mimeType, modifiedTime, owners, lastModifyingUser)",
+        orderBy="modifiedTime desc",
+    ).execute()
     return results.get('files', [])
 
 def get_file_activity(file_id: str) -> Dict:
@@ -47,11 +52,10 @@ def download_file(file_id: str, dest_path: str):
     """Download a file from Google Drive to dest_path."""
     service = get_drive_service()
     request = service.files().get_media(fileId=file_id)
-    with open(dest_path, 'wb') as f:
-        downloader = build('drive', 'v3', credentials=service._http.credentials).files().get_media(fileId=file_id)
-        done = False
-        while not done:
-            status, done = downloader.next_chunk()
-            if status:
-                print(f"Download {int(status.progress() * 100)}%.")
-        f.write(request.execute())
+    fh = io.FileIO(dest_path, 'wb')
+    downloader = MediaIoBaseDownload(fh, request)
+    done = False
+    while not done:
+        status, done = downloader.next_chunk()
+        if status:
+            print(f"Download {int(status.progress() * 100)}%")
