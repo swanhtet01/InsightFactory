@@ -13,6 +13,7 @@ A modern, robust KPI dashboard for tyre production analytics. All data is loaded
 - Claim spreadsheets summarized to `reports/latest_claim_metrics.csv`
 - Document text extracted to `reports/latest_docs.txt` for search and review
 - Document word counts tracked in `reports/latest_doc_metrics.csv` for quick sizing insights
+- PDF parsing is optional; install `pdfminer.six` if your Drive contains PDFs
 
 ## Folder Structure
 - `app.py` — Main entry point
