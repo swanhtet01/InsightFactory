@@ -12,6 +12,7 @@ A modern, robust KPI dashboard for tyre production analytics. All data is loaded
 - Automatic KPI computation after each sync with results stored in `reports/latest_kpis.csv`
 - Claim spreadsheets summarized to `reports/latest_claim_metrics.csv`
 - Document text extracted to `reports/latest_docs.txt` for search and review
+- Document word counts tracked in `reports/latest_doc_metrics.csv` for quick sizing insights
 
 ## Folder Structure
 - `app.py` — Main entry point
