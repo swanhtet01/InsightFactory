@@ -36,10 +36,10 @@ def _extract_text_from_file(path: str) -> str:
     return ""
 
 
-def process_documents(files: List[str]) -> None:
+def process_documents(files: List[str]) -> dict:
     docs = [f for f in files if f.lower().endswith(('.pdf', '.png', '.jpg', '.jpeg', '.txt'))]
     if not docs:
-        return
+        return {}
     extracts = []
     metrics = []
     for path in docs:
@@ -54,3 +54,4 @@ def process_documents(files: List[str]) -> None:
             fh.write('\n'.join(extracts))
         pd.DataFrame(metrics).to_csv('reports/latest_doc_metrics.csv', index=False)
         print('Saved document extracts to reports/latest_docs.txt')
+    return {"documents_processed": len(metrics)}

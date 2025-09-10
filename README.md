@@ -14,6 +14,7 @@ A modern, robust KPI dashboard for tyre production analytics. All data is loaded
 - Document text extracted to `reports/latest_docs.txt` for search and review
 - Document word counts tracked in `reports/latest_doc_metrics.csv` for quick sizing insights
 - PDF parsing is optional; install `pdfminer.six` if your Drive contains PDFs
+- Unified pipeline runner coordinates KPI, claim, and document processing for easy reuse
 
 ## Folder Structure
 - `app.py` — Main entry point
@@ -26,9 +27,10 @@ A modern, robust KPI dashboard for tyre production analytics. All data is loaded
 
 ## Usage
 1. Place your Google Drive credentials in `credentials.json`.
-2. Start the Drive watcher: `python helpers/drive_watcher.py` (runs continuously and computes KPIs, claim metrics, and document extracts)
-3. Run the app: `streamlit run app.py`
-4. All analytics are auto-updated from your Drive folder with results stored in `reports/`.
+2. Run the full pipeline once: `python -m helpers.pipeline_runner "<file1>" "<file2>" ...` or let the Drive watcher call it automatically.
+3. Start the Drive watcher: `python helpers/drive_watcher.py` (runs continuously and computes KPIs, claim metrics, and document extracts)
+4. Run the app: `streamlit run app.py`
+5. All analytics are auto-updated from your Drive folder with results stored in `reports/`.
 
 ## Maintenance
 - Only keep files and modules listed above. Remove legacy/unused files for clarity.

@@ -9,6 +9,7 @@ import pandas as pd
 from helpers.document_processor import process_documents
 from helpers.claims_pipeline import compute_claim_metrics
 from helpers.live_kpi_pipeline import compute_kpis_for_files
+from helpers.pipeline_runner import run_full_pipeline
 
 
 def create_png(path: Path, text: str) -> None:
@@ -75,6 +76,27 @@ class TestPipelines(unittest.TestCase):
         kpi_df = pd.read_csv(kpi_out)
         self.assertEqual(kpi_df.loc[0, "production"], 100)
         self.assertAlmostEqual(kpi_df.loc[0, "target_achievement"], 100 / 120 * 100)
+
+    def test_full_pipeline(self) -> None:
+        txt = Path("sample.txt")
+        img = Path("sample.png")
+        claim = Path("claim.csv")
+        kpi = Path("data.csv")
+
+        txt.write_text("Hello TXT", encoding="utf-8")
+        create_png(img, "Hello Image")
+        claim.write_text("amount\n10\n20\n", encoding="utf-8")
+        kpi.write_text(
+            "oee,fpy,quantity,target,a_grade,b_grade,scrap\n0.8,0.9,100,120,90,10,5\n",
+            encoding="utf-8",
+        )
+
+        run_full_pipeline([str(txt), str(img), str(claim), str(kpi)])
+
+        self.assertTrue(Path("reports/latest_docs.txt").exists())
+        self.assertTrue(Path("reports/latest_doc_metrics.csv").exists())
+        self.assertTrue(Path("reports/latest_claim_metrics.csv").exists())
+        self.assertTrue(Path("reports/latest_kpis.csv").exists())
 
 
 if __name__ == "__main__":
