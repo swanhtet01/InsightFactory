@@ -26,11 +26,12 @@ A modern, robust KPI dashboard for tyre production analytics. All data is loaded
 - `config/` — Configuration files
 
 ## Usage
-1. Place your Google Drive credentials in `credentials.json`.
-2. Run the full pipeline once: `python -m helpers.pipeline_runner "<file1>" "<file2>" ...` or let the Drive watcher call it automatically.
-3. Start the Drive watcher: `python helpers/drive_watcher.py` (runs continuously and computes KPIs, claim metrics, and document extracts)
-4. Run the app: `streamlit run app.py`
-5. All analytics are auto-updated from your Drive folder with results stored in `reports/`.
+1. Copy `.env.example` to `.env` and fill in any API keys (OpenAI, Gemini, GitHub).
+2. Download Google API credentials and save as `credentials.json` (not tracked; see `credentials_sample.json` for format).
+3. Run the full pipeline once: `python -m helpers.pipeline_runner "<file1>" "<file2>" ...` or let the Drive watcher call it automatically.
+4. Start the Drive watcher: `python helpers/drive_watcher.py` (runs continuously and computes KPIs, claim metrics, and document extracts)
+5. Run the app: `streamlit run app.py`
+6. All analytics are auto-updated from your Drive folder with results stored in `reports/`.
 
 ## Maintenance
 - Only keep files and modules listed above. Remove legacy/unused files for clarity.
