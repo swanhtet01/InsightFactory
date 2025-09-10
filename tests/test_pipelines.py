@@ -3,6 +3,7 @@ import shutil
 import tempfile
 from pathlib import Path
 import unittest
+import json
 
 import pandas as pd
 
@@ -92,6 +93,13 @@ class TestPipelines(unittest.TestCase):
         )
 
         run_full_pipeline(collect_files(["."]))
+
+        summary = Path("reports/latest_summary.json")
+        self.assertTrue(summary.exists())
+        data = json.loads(summary.read_text(encoding="utf-8"))
+        self.assertIn("kpis", data)
+        self.assertIn("claim_metrics", data)
+        self.assertIn("document_metrics", data)
 
     def test_collect_files(self) -> None:
         txt = Path("sample.txt")

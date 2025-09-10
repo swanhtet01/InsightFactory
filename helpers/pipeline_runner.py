@@ -1,6 +1,8 @@
 """Unified pipeline runner for syncing, KPI, claim, and document processing."""
 from pathlib import Path
 from typing import Dict, Iterable, List
+import json
+import os
 
 from helpers.claims_pipeline import compute_claim_metrics
 from helpers.document_processor import process_documents
@@ -38,6 +40,23 @@ def run_full_pipeline(files: List[str]) -> Dict[str, Dict]:
     results["kpis"] = compute_kpis_for_files(files)
     results["claim_metrics"] = compute_claim_metrics(files)
     results["document_metrics"] = process_documents(files)
+    if any(results.values()):
+        os.makedirs("reports", exist_ok=True)
+
+        def _to_serializable(obj):
+            if isinstance(obj, dict):
+                return {k: _to_serializable(v) for k, v in obj.items()}
+            if isinstance(obj, list):
+                return [_to_serializable(v) for v in obj]
+            if hasattr(obj, "item"):
+                try:
+                    return obj.item()
+                except Exception:
+                    return str(obj)
+            return obj
+
+        with open("reports/latest_summary.json", "w", encoding="utf-8") as fh:
+            json.dump(_to_serializable(results), fh, indent=2)
     return results
 
 
