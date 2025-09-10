@@ -10,3 +10,4 @@ pytesseract==0.3.10
 python-dotenv==1.0.0
 Pillow==10.1.0
 numpy==1.26.2
+pdfminer.six==20221105
