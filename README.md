@@ -17,6 +17,7 @@ A modern, robust KPI dashboard for tyre production analytics. All data is loaded
 - Summary also rendered to `reports/latest_summary.html` for quick human review
 - PDF parsing is optional; install `pdfminer.six` if your Drive contains PDFs
 - Unified pipeline runner coordinates KPI, claim, and document processing for easy reuse
+- Automatically derives Overall Equipment Effectiveness (OEE) and first-pass yield (FPY) when raw production columns are present
 
 ## Folder Structure
 - `app.py` — Main entry point

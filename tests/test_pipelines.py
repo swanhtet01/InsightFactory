@@ -58,7 +58,11 @@ class TestPipelines(unittest.TestCase):
         claim.write_text("amount\n10\n20\n", encoding="utf-8")
         kpi = Path("data.csv")
         kpi.write_text(
-            "oee,fpy,quantity,target,a_grade,b_grade,scrap\n0.8,0.9,100,120,90,10,5\n",
+            (
+                "available_time,operating_time,ideal_cycle_time,total_pieces,good_pieces,"
+                "quantity,target,a_grade,b_grade,scrap\n"
+                "480,450,1,400,380,400,420,380,20,20\n"
+            ),
             encoding="utf-8",
         )
 
@@ -75,8 +79,10 @@ class TestPipelines(unittest.TestCase):
         self.assertEqual(claim_df.loc[0, "total_claim_amount"], 30)
 
         kpi_df = pd.read_csv(kpi_out)
-        self.assertEqual(kpi_df.loc[0, "production"], 100)
-        self.assertAlmostEqual(kpi_df.loc[0, "target_achievement"], 100 / 120 * 100)
+        self.assertEqual(kpi_df.loc[0, "production"], 400)
+        self.assertAlmostEqual(kpi_df.loc[0, "target_achievement"], 400 / 420 * 100)
+        self.assertAlmostEqual(kpi_df.loc[0, "oee"], 0.791666, places=5)
+        self.assertAlmostEqual(kpi_df.loc[0, "fpy"], 0.95, places=5)
 
     def test_full_pipeline(self) -> None:
         txt = Path("sample.txt")
@@ -88,7 +94,11 @@ class TestPipelines(unittest.TestCase):
         create_png(img, "Hello Image")
         claim.write_text("amount\n10\n20\n", encoding="utf-8")
         kpi.write_text(
-            "oee,fpy,quantity,target,a_grade,b_grade,scrap\n0.8,0.9,100,120,90,10,5\n",
+            (
+                "available_time,operating_time,ideal_cycle_time,total_pieces,good_pieces,"
+                "quantity,target,a_grade,b_grade,scrap\n"
+                "480,450,1,400,380,400,420,380,20,20\n"
+            ),
             encoding="utf-8",
         )
 
@@ -100,6 +110,7 @@ class TestPipelines(unittest.TestCase):
         self.assertIn("kpis", data)
         self.assertIn("claim_metrics", data)
         self.assertIn("document_metrics", data)
+        self.assertIn("oee", data["kpis"])
 
         html = Path("reports/latest_summary.html")
         self.assertTrue(html.exists())

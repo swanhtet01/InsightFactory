@@ -23,11 +23,30 @@ class KPIAgent:
             if 'quantity' in df.columns and 'target' in df.columns:
                 df['output_efficiency'] = df['quantity'] / df['target']
                 df['output_variance'] = df['quantity'] - df['target']
-            
+
             # Quality features
             if 'a_grade' in df.columns and 'b_grade' in df.columns:
                 df['total_production'] = df['a_grade'] + df['b_grade']
                 df['quality_score'] = df['a_grade'] / df['total_production']
+
+            # Derive OEE and FPY when component columns are present
+            required_oee = {
+                'available_time',
+                'operating_time',
+                'ideal_cycle_time',
+                'total_pieces',
+                'good_pieces',
+            }
+            if 'oee' not in df.columns and required_oee.issubset(df.columns):
+                availability = df['operating_time'] / df['available_time']
+                performance = (
+                    df['ideal_cycle_time'] * df['total_pieces']
+                ) / df['operating_time']
+                quality = df['good_pieces'] / df['total_pieces']
+                df['oee'] = availability * performance * quality
+
+            if 'fpy' not in df.columns and {'good_pieces', 'total_pieces'}.issubset(df.columns):
+                df['fpy'] = df['good_pieces'] / df['total_pieces']
             
             # Moving averages and trends
             numeric_cols = df.select_dtypes(include=[np.number]).columns
