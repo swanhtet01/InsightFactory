@@ -7,6 +7,7 @@ import os
 from helpers.claims_pipeline import compute_claim_metrics
 from helpers.document_processor import process_documents
 from helpers.live_kpi_pipeline import compute_kpis_for_files
+from helpers.html_report import write_html_report
 
 
 def collect_files(paths: Iterable[str]) -> List[str]:
@@ -57,6 +58,7 @@ def run_full_pipeline(files: List[str]) -> Dict[str, Dict]:
 
         with open("reports/latest_summary.json", "w", encoding="utf-8") as fh:
             json.dump(_to_serializable(results), fh, indent=2)
+        write_html_report(results)
     return results
 
 

@@ -14,6 +14,7 @@ A modern, robust KPI dashboard for tyre production analytics. All data is loaded
 - Document text extracted to `reports/latest_docs.txt` for search and review
 - Document word counts tracked in `reports/latest_doc_metrics.csv` for quick sizing insights
 - All pipeline outputs aggregated into `reports/latest_summary.json` for downstream systems
+- Summary also rendered to `reports/latest_summary.html` for quick human review
 - PDF parsing is optional; install `pdfminer.six` if your Drive contains PDFs
 - Unified pipeline runner coordinates KPI, claim, and document processing for easy reuse
 

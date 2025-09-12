@@ -101,6 +101,11 @@ class TestPipelines(unittest.TestCase):
         self.assertIn("claim_metrics", data)
         self.assertIn("document_metrics", data)
 
+        html = Path("reports/latest_summary.html")
+        self.assertTrue(html.exists())
+        html_content = html.read_text(encoding="utf-8")
+        self.assertIn("Pipeline Summary", html_content)
+
     def test_collect_files(self) -> None:
         txt = Path("sample.txt")
         img_dir = Path("sub")
