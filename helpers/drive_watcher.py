@@ -4,14 +4,15 @@ import time
 from helpers.drive_sync import sync_drive_files
 from helpers.drive_browser import get_drive_service
 from helpers.pipeline_runner import run_full_pipeline
+from config import GOOGLE_DRIVE_FOLDER_IDS
 
-FOLDER_ID = "1-1b9zryLrFrS3yJVrmSQ0UlcwoPmwSEt"
 
-
-def watch_drive_folder(interval: int = 60) -> None:
-    """Watch the Google Drive folder for changes and sync new files."""
+def watch_drive_folder(interval: int = 60, folder_ids=None) -> None:
+    """Watch the Google Drive folders for changes and sync new files."""
+    folder_ids = folder_ids or GOOGLE_DRIVE_FOLDER_IDS
     service = get_drive_service()
     page_token = service.changes().getStartPageToken().execute()["startPageToken"]
+    folder_ids_set = set(folder_ids)
     while True:
         response = service.changes().list(
             pageToken=page_token,
@@ -20,9 +21,11 @@ def watch_drive_folder(interval: int = 60) -> None:
         ).execute()
         for change in response.get("changes", []):
             file = change.get("file")
-            if file and not change.get("removed") and FOLDER_ID in file.get("parents", []):
+            if file and not change.get("removed") and any(
+                fid in file.get("parents", []) for fid in folder_ids_set
+            ):
                 print(f"Detected change in: {file['name']}")
-                files = sync_drive_files()
+                files = sync_drive_files(folder_ids)
                 run_full_pipeline(files)
         if "newStartPageToken" in response:
             page_token = response["newStartPageToken"]
