@@ -33,9 +33,10 @@ A modern, robust KPI dashboard for tyre production analytics. All data is loaded
 3. Run the full pipeline once: `python -m helpers.pipeline_runner <path> [<path> ...]` where each path can be a file or a directory; directories are scanned recursively. The Drive watcher can also trigger it automatically.
 4. Start the Drive watcher: `python helpers/drive_watcher.py` (runs continuously and computes KPIs, claim metrics, and document extracts for all configured folders)
 5. Run the app: `streamlit run app.py`
-6. All analytics are auto-updated from your Drive folders with results stored in `reports/`.
+6. Open the **Pipeline Summary** page in the Streamlit app to inspect the aggregated KPI, claim, and document metrics.
+7. All analytics are auto-updated from your Drive folders with results stored in `reports/`.
 
 ## Maintenance
 - Only keep files and modules listed above. Remove legacy/unused files for clarity.
 - For help, contact your analytics team.
-- Continuous integration runs `python -m py_compile` on key helpers for reliability (see `.github/workflows/ci.yml`).
+- Continuous integration runs `python -m py_compile` and the unit test suite for reliability (see `.github/workflows/ci.yml`).

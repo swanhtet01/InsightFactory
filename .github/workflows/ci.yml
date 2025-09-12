@@ -20,3 +20,4 @@ jobs:
       - name: Lint and Test
         run: |
           python -m py_compile helpers/drive_browser.py helpers/drive_sync.py helpers/drive_watcher.py helpers/live_kpi_pipeline.py helpers/document_processor.py helpers/claims_pipeline.py
+          python -m unittest tests/test_pipelines.py tests/test_drive_sync.py
