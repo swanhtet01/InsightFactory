@@ -110,7 +110,15 @@ class TestPipelines(unittest.TestCase):
         self.assertIn("kpis", data)
         self.assertIn("claim_metrics", data)
         self.assertIn("document_metrics", data)
+        self.assertIn("ai_research", data)
         self.assertIn("oee", data["kpis"])
+
+        research = data["ai_research"]
+        self.assertIn("next_actions", research)
+        self.assertTrue(research["next_actions"])
+        self.assertIn("tooling", research)
+        self.assertIn("copilotkit", research["tooling"])
+        self.assertIn("deep_research", research["tooling"])
 
         html = Path("reports/latest_summary.html")
         self.assertTrue(html.exists())

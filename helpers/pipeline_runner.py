@@ -8,6 +8,7 @@ from helpers.claims_pipeline import compute_claim_metrics
 from helpers.document_processor import process_documents
 from helpers.live_kpi_pipeline import compute_kpis_for_files
 from helpers.html_report import write_html_report
+from helpers.research_planner import ResearchPlanner
 
 
 def collect_files(paths: Iterable[str]) -> List[str]:
@@ -41,6 +42,8 @@ def run_full_pipeline(files: List[str]) -> Dict[str, Dict]:
     results["kpis"] = compute_kpis_for_files(files)
     results["claim_metrics"] = compute_claim_metrics(files)
     results["document_metrics"] = process_documents(files)
+    planner = ResearchPlanner.from_env()
+    results["ai_research"] = planner.generate_insights(results)
     if any(results.values()):
         os.makedirs("reports", exist_ok=True)
 
