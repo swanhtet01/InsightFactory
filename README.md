@@ -38,6 +38,13 @@ A modern, robust KPI dashboard for tyre production analytics. All data is loaded
 6. Open the **Pipeline Summary** page in the Streamlit app to inspect the aggregated KPI, claim, and document metrics.
 7. All analytics are auto-updated from your Drive folders with results stored in `reports/`.
 
+## Testing
+- Install the dependencies from `requirements.txt` (a virtual environment is recommended).
+- Run `pytest` from the repository root to execute the end-to-end regression suite. The included
+  `pytest.ini` ensures the `helpers` package resolves correctly even when the `pytest` console
+  script is used, and optional OCR assertions are skipped automatically when Tesseract is not
+  available.
+
 ## AI Copilot & Research Integrations
 - Set `COPILOTKIT_API_BASE` and `COPILOTKIT_API_KEY` to stream data to [CopilotKit](https://github.com/CopilotKit/CopilotKit) copilots. Override the relative REST path with `COPILOTKIT_INSIGHTS_PATH` if your deployment does not expose `/api/v1/insights`.
 - Set `DEEPRESEARCH_API_BASE` and `DEEPRESEARCH_API_KEY` to orchestrate Tongyi [DeepResearch](https://github.com/Alibaba-NLP/DeepResearch) studies. Customize the endpoint via `DEEPRESEARCH_RESEARCH_PATH` if required.

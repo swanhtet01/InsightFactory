@@ -31,7 +31,11 @@
 - Multi-plant digital twin with scenario simulations and AI-assisted scheduling.
 
 ## Next Loop
-1. Implement FastAPI service for KPI exposure.
-2. Configure CopilotKit project consuming the new API endpoints.
-3. Capture DeepResearch briefs and push into `reports/latest_research.md`.
-4. Review telemetry and iterate on UX + automation coverage.
+1. Ship a lightweight FastAPI gateway that streams KPI, claim, and document metrics for CopilotKit and
+   external ERP consumers.
+2. Attach the Drive watcher to an async task runner (Celery or RQ) so each change triggers an isolated
+   pipeline execution with retry/backoff semantics.
+3. Persist per-plant historical summaries (OEE, FPY, claims) to a warehouse-friendly format to unlock
+   trend visualisations in the Streamlit UI.
+4. Integrate alerting by pushing high-severity research planner recommendations to Slack or email so
+   operations staff can act immediately.
