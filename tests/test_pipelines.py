@@ -127,6 +127,17 @@ class TestPipelines(unittest.TestCase):
         html_content = html.read_text(encoding="utf-8")
         self.assertIn("Pipeline Summary", html_content)
 
+        history = Path("reports/run_history.csv")
+        self.assertTrue(history.exists())
+        history_df = pd.read_csv(history)
+        self.assertGreaterEqual(len(history_df), 1)
+        self.assertIn("kpi_oee", history_df.columns)
+
+        initial_rows = len(history_df)
+        run_full_pipeline(collect_files(["."]))
+        updated_history = pd.read_csv(history)
+        self.assertGreater(len(updated_history), initial_rows)
+
     def test_collect_files(self) -> None:
         txt = Path("sample.txt")
         img_dir = Path("sub")

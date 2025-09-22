@@ -15,6 +15,7 @@ A modern, robust KPI dashboard for tyre production analytics. All data is loaded
 - Document word counts tracked in `reports/latest_doc_metrics.csv` for quick sizing insights
 - All pipeline outputs aggregated into `reports/latest_summary.json` for downstream systems
 - Summary also rendered to `reports/latest_summary.html` for quick human review
+- Each run is appended to `reports/run_history.csv` so dashboards can trend KPIs, claims, and document throughput over time
 - AI research layer produces continuous improvement plans and integration steps for CopilotKit and Tongyi DeepResearch, including live API hand-offs when credentials are provided
 - PDF parsing is optional; install `pdfminer.six` if your Drive contains PDFs
 - Unified pipeline runner coordinates KPI, claim, and document processing for easy reuse
@@ -35,8 +36,14 @@ A modern, robust KPI dashboard for tyre production analytics. All data is loaded
 3. Run the full pipeline once: `python -m helpers.pipeline_runner <path> [<path> ...]` where each path can be a file or a directory; directories are scanned recursively. The Drive watcher can also trigger it automatically.
 4. Start the Drive watcher: `python helpers/drive_watcher.py` (runs continuously and computes KPIs, claim metrics, and document extracts for all configured folders)
 5. Run the app: `streamlit run app.py`
-6. Open the **Pipeline Summary** page in the Streamlit app to inspect the aggregated KPI, claim, and document metrics.
-7. All analytics are auto-updated from your Drive folders with results stored in `reports/`.
+6. Visit the **📊 Operations Command Center** page to review run cadence, trend charts, and AI-driven action plans across plants.
+7. Open the **📁 Pipeline Summary** page to inspect the latest KPI, claim, and document metrics alongside integration telemetry.
+8. All analytics are auto-updated from your Drive folders with results stored in `reports/` (JSON, HTML, CSV history, document extracts).
+
+## Dashboards
+- **📊 Operations Command Center** highlights multi-run trends, production throughput, claims exposure, and recommended next steps driven by the AI research planner.
+- **📁 Pipeline Summary** provides a drill-down into the most recent run, including metric tables, charts, and raw HTML exports for compliance snapshots.
+- **🤖 AI Operations Copilot** (existing page) surfaces CopilotKit and DeepResearch readiness plus the recommended enablement roadmap.
 
 ## Testing
 - Install the dependencies from `requirements.txt` (a virtual environment is recommended).
