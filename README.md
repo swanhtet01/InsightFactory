@@ -15,7 +15,7 @@ A modern, robust KPI dashboard for tyre production analytics. All data is loaded
 - Document word counts tracked in `reports/latest_doc_metrics.csv` for quick sizing insights
 - All pipeline outputs aggregated into `reports/latest_summary.json` for downstream systems
 - Summary also rendered to `reports/latest_summary.html` for quick human review
-- AI research layer produces continuous improvement plans and integration steps for CopilotKit and Tongyi DeepResearch
+- AI research layer produces continuous improvement plans and integration steps for CopilotKit and Tongyi DeepResearch, including live API hand-offs when credentials are provided
 - PDF parsing is optional; install `pdfminer.six` if your Drive contains PDFs
 - Unified pipeline runner coordinates KPI, claim, and document processing for easy reuse
 - Automatically derives Overall Equipment Effectiveness (OEE) and first-pass yield (FPY) when raw production columns are present
@@ -39,10 +39,10 @@ A modern, robust KPI dashboard for tyre production analytics. All data is loaded
 7. All analytics are auto-updated from your Drive folders with results stored in `reports/`.
 
 ## AI Copilot & Research Integrations
-- Set `COPILOTKIT_API_BASE` and `COPILOTKIT_API_KEY` to stream data to [CopilotKit](https://github.com/CopilotKit/CopilotKit) copilots.
-- Set `DEEPRESEARCH_API_BASE` and `DEEPRESEARCH_API_KEY` to orchestrate Tongyi [DeepResearch](https://github.com/Alibaba-NLP/DeepResearch) studies.
-- The pipeline summary now embeds AI observations, recommended actions, and next integration steps in `reports/latest_summary.json` and the Streamlit **Pipeline Summary** page.
-- Use these connectors to auto-generate shift handover summaries, claim triage, and deep investigative narratives without hard-coding API calls into the analytics core.
+- Set `COPILOTKIT_API_BASE` and `COPILOTKIT_API_KEY` to stream data to [CopilotKit](https://github.com/CopilotKit/CopilotKit) copilots. Override the relative REST path with `COPILOTKIT_INSIGHTS_PATH` if your deployment does not expose `/api/v1/insights`.
+- Set `DEEPRESEARCH_API_BASE` and `DEEPRESEARCH_API_KEY` to orchestrate Tongyi [DeepResearch](https://github.com/Alibaba-NLP/DeepResearch) studies. Customize the endpoint via `DEEPRESEARCH_RESEARCH_PATH` if required.
+- The pipeline summary now embeds AI observations, recommended actions, integration API responses, and next integration steps in `reports/latest_summary.json`, the HTML report, and the Streamlit **Pipeline Summary**/**AI Operations Copilot** pages.
+- Use these connectors to auto-generate shift handover summaries, claim triage, and deep investigative narratives without hard-coding API calls into the analytics core. Integration errors or disabled states are surfaced in the UI so you can troubleshoot credentials quickly.
 
 ## Maintenance
 - Only keep files and modules listed above. Remove legacy/unused files for clarity.

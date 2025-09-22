@@ -6,6 +6,12 @@ from datetime import datetime, timezone
 from typing import Dict, List, Optional
 import os
 
+from helpers.integration_clients import (
+    CopilotKitClient,
+    IntegrationResult,
+    TongyiDeepResearchClient,
+)
+
 
 @dataclass
 class IntegrationConfig:
@@ -14,6 +20,7 @@ class IntegrationConfig:
     name: str
     api_base: Optional[str] = None
     api_key: Optional[str] = None
+    endpoint: Optional[str] = None
 
     @property
     def enabled(self) -> bool:
@@ -27,9 +34,21 @@ class ResearchPlanner:
         self,
         copilotkit: Optional[IntegrationConfig] = None,
         deep_research: Optional[IntegrationConfig] = None,
+        copilotkit_client: Optional[CopilotKitClient] = None,
+        deep_research_client: Optional[TongyiDeepResearchClient] = None,
     ) -> None:
         self.copilotkit = copilotkit or IntegrationConfig(name="CopilotKit")
         self.deep_research = deep_research or IntegrationConfig(name="Tongyi DeepResearch")
+        self._copilotkit_client = copilotkit_client or CopilotKitClient(
+            api_base=self.copilotkit.api_base,
+            api_key=self.copilotkit.api_key,
+            endpoint=self.copilotkit.endpoint,
+        )
+        self._deep_research_client = deep_research_client or TongyiDeepResearchClient(
+            api_base=self.deep_research.api_base,
+            api_key=self.deep_research.api_key,
+            endpoint=self.deep_research.endpoint,
+        )
 
     @classmethod
     def from_env(cls) -> "ResearchPlanner":
@@ -39,11 +58,13 @@ class ResearchPlanner:
             name="CopilotKit",
             api_base=os.getenv("COPILOTKIT_API_BASE"),
             api_key=os.getenv("COPILOTKIT_API_KEY"),
+            endpoint=os.getenv("COPILOTKIT_INSIGHTS_PATH", "/api/v1/insights"),
         )
         deep_research = IntegrationConfig(
             name="Tongyi DeepResearch",
             api_base=os.getenv("DEEPRESEARCH_API_BASE"),
             api_key=os.getenv("DEEPRESEARCH_API_KEY"),
+            endpoint=os.getenv("DEEPRESEARCH_RESEARCH_PATH", "/api/v1/research"),
         )
         return cls(copilotkit=copilot, deep_research=deep_research)
 
@@ -52,6 +73,7 @@ class ResearchPlanner:
 
         actions = self._baseline_actions(summary)
         observations = self._observations(summary)
+        integrations = self._integration_runs(summary)
         tooling = {
             "copilotkit": self._copilotkit_plan(),
             "deep_research": self._deep_research_plan(),
@@ -60,12 +82,34 @@ class ResearchPlanner:
             "generated_at": datetime.now(timezone.utc).isoformat(),
             "copilotkit_enabled": self.copilotkit.enabled,
             "deep_research_enabled": self.deep_research.enabled,
+            "copilotkit_status": integrations["copilotkit"].get("status"),
+            "deep_research_status": integrations["deep_research"].get("status"),
         }
         return {
             "next_actions": actions,
             "observations": observations,
             "tooling": tooling,
+            "integrations": integrations,
             "metadata": metadata,
+        }
+
+    def _integration_runs(self, summary: Dict[str, Dict]) -> Dict[str, Dict]:
+        def _result_to_dict(result: IntegrationResult) -> Dict[str, object]:
+            return result.to_dict()
+
+        copilotkit_result = (
+            self._copilotkit_client.request_brief(summary)
+            if self._copilotkit_client.enabled
+            else IntegrationResult(status="disabled")
+        )
+        deep_research_result = (
+            self._deep_research_client.request_research(summary)
+            if self._deep_research_client.enabled
+            else IntegrationResult(status="disabled")
+        )
+        return {
+            "copilotkit": _result_to_dict(copilotkit_result),
+            "deep_research": _result_to_dict(deep_research_result),
         }
 
     def _baseline_actions(self, summary: Dict[str, Dict]) -> List[str]:
@@ -150,6 +194,7 @@ class ResearchPlanner:
         config = {
             "enabled": self.copilotkit.enabled,
             "api_base": self.copilotkit.api_base,
+            "endpoint": self.copilotkit.endpoint,
             "documentation": "https://github.com/CopilotKit/CopilotKit",
             "recommended_steps": base_steps,
         }
@@ -168,6 +213,7 @@ class ResearchPlanner:
         config = {
             "enabled": self.deep_research.enabled,
             "api_base": self.deep_research.api_base,
+            "endpoint": self.deep_research.endpoint,
             "documentation": "https://github.com/Alibaba-NLP/DeepResearch",
             "recommended_steps": milestones,
         }

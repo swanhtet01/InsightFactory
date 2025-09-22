@@ -119,6 +119,8 @@ class TestPipelines(unittest.TestCase):
         self.assertIn("tooling", research)
         self.assertIn("copilotkit", research["tooling"])
         self.assertIn("deep_research", research["tooling"])
+        self.assertIn("integrations", research)
+        self.assertEqual(research["integrations"]["copilotkit"]["status"], "disabled")
 
         html = Path("reports/latest_summary.html")
         self.assertTrue(html.exists())

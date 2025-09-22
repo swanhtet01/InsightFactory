@@ -36,5 +36,36 @@ def write_html_report(summary: Dict, path: str = "reports/latest_summary.html") 
         else:
             sections.append(pd.DataFrame([doc_metrics]).to_html(index=False))
 
+    ai_research = summary.get("ai_research") or {}
+    if ai_research:
+        sections.append("<h2>AI Research Insights</h2>")
+        observations = ai_research.get("observations") or []
+        if observations:
+            sections.append("<h3>Observations</h3>")
+            sections.append("<ul>")
+            for obs in observations:
+                sections.append(f"<li>{obs}</li>")
+            sections.append("</ul>")
+
+        actions = ai_research.get("next_actions") or []
+        if actions:
+            sections.append("<h3>Next Actions</h3>")
+            sections.append("<ul>")
+            for action in actions:
+                sections.append(f"<li>{action}</li>")
+            sections.append("</ul>")
+
+        integrations = ai_research.get("integrations") or {}
+        if integrations:
+            sections.append("<h3>Integration Status</h3>")
+            rows = []
+            for name, info in integrations.items():
+                rows.append({
+                    "Integration": name.replace("_", " ").title(),
+                    "Status": info.get("status"),
+                    "Error": info.get("error"),
+                })
+            sections.append(pd.DataFrame(rows).to_html(index=False))
+
     sections.extend(["</body>", "</html>"])
     output.write_text("\n".join(sections), encoding="utf-8")

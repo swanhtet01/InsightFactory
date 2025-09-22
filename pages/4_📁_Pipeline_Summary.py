@@ -53,6 +53,19 @@ if ai_research:
                 for step in plan["recommended_steps"]:
                     st.write(f"- {step}")
 
+    integrations = ai_research.get("integrations", {})
+    if integrations:
+        st.markdown("### Live Integration Status")
+        for name, info in integrations.items():
+            status = info.get("status", "unknown")
+            icon = "✅" if status == "ok" else "⚪" if status == "disabled" else "⚠️"
+            with st.expander(f"{icon} {name.replace('_', ' ').title()}"):
+                st.write(f"**Status:** {status}")
+                if info.get("error"):
+                    st.error(info["error"])
+                if info.get("data"):
+                    st.json(info["data"])
+
     if ai_research.get("metadata"):
         st.caption(f"Generated: {ai_research['metadata'].get('generated_at', 'unknown')}")
 
