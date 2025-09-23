@@ -126,6 +126,7 @@ class TestPipelines(unittest.TestCase):
         self.assertTrue(html.exists())
         html_content = html.read_text(encoding="utf-8")
         self.assertIn("Pipeline Summary", html_content)
+        self.assertIn("Run History", html_content)
 
         history = Path("reports/run_history.csv")
         self.assertTrue(history.exists())

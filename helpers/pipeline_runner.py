@@ -62,8 +62,8 @@ def run_full_pipeline(files: List[str]) -> Dict[str, Dict]:
 
         with open("reports/latest_summary.json", "w", encoding="utf-8") as fh:
             json.dump(_to_serializable(results), fh, indent=2)
-        write_html_report(results)
         record_run(results)
+        write_html_report(results)
     return results
 
 

@@ -50,11 +50,16 @@ class KPIAgent:
             
             # Moving averages and trends
             numeric_cols = df.select_dtypes(include=[np.number]).columns
-            for col in numeric_cols:
-                df[f'{col}_ma7'] = df[col].rolling(window=7).mean()
-                df[f'{col}_ma30'] = df[col].rolling(window=30).mean()
-                df[f'{col}_trend'] = df[col].diff()
-            
+            if len(numeric_cols) > 0:
+                rolling_data = {}
+                for col in numeric_cols:
+                    series = df[col]
+                    rolling_data[f"{col}_ma7"] = series.rolling(window=7).mean()
+                    rolling_data[f"{col}_ma30"] = series.rolling(window=30).mean()
+                    rolling_data[f"{col}_trend"] = series.diff()
+                engineered = pd.DataFrame(rolling_data, index=df.index)
+                df = pd.concat([df, engineered], axis=1)
+
             return df
         except Exception as e:
             print(f"Error engineering features: {e}")

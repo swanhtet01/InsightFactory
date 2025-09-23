@@ -15,6 +15,7 @@ A modern, robust KPI dashboard for tyre production analytics. All data is loaded
 - Document word counts tracked in `reports/latest_doc_metrics.csv` for quick sizing insights
 - All pipeline outputs aggregated into `reports/latest_summary.json` for downstream systems
 - Summary also rendered to `reports/latest_summary.html` for quick human review
+- HTML summary automatically includes the latest run history snapshot so audits have context without opening Streamlit
 - Each run is appended to `reports/run_history.csv` so dashboards can trend KPIs, claims, and document throughput over time
 - AI research layer produces continuous improvement plans and integration steps for CopilotKit and Tongyi DeepResearch, including live API hand-offs when credentials are provided
 - PDF parsing is optional; install `pdfminer.six` if your Drive contains PDFs
