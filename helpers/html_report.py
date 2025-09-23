@@ -1,8 +1,20 @@
 """Generate a simple HTML report from pipeline summary data."""
-from typing import Dict
+from typing import Dict, Any
 import os
 from pathlib import Path
 import pandas as pd
+
+
+def _format_value(value: Any, unit: str) -> str:
+    if value is None or (isinstance(value, float) and pd.isna(value)):
+        return ""
+    if unit == "%":
+        return f"{float(value):.1f}%"
+    if unit == "currency":
+        return f"${float(value):,.2f}"
+    if isinstance(value, (int, float)):
+        return f"{float(value):.1f}"
+    return str(value)
 
 
 def write_html_report(summary: Dict, path: str = "reports/latest_summary.html") -> None:
@@ -66,6 +78,48 @@ def write_html_report(summary: Dict, path: str = "reports/latest_summary.html") 
                     "Error": info.get("error"),
                 })
             sections.append(pd.DataFrame(rows).to_html(index=False))
+
+    performance = summary.get("performance_insights") or {}
+    if performance:
+        sections.append("<h2>Performance Insights</h2>")
+        trends = performance.get("trends") or []
+        if trends:
+            trend_rows = []
+            for entry in trends:
+                unit = entry.get("unit", "")
+                trend_rows.append(
+                    {
+                        "Metric": entry.get("metric"),
+                        "Status": entry.get("status"),
+                        "Current": _format_value(entry.get("current"), unit),
+                        "Previous": _format_value(entry.get("previous"), unit),
+                        "Δ": _format_value(entry.get("change"), unit),
+                        "Δ per Run": _format_value(entry.get("trend_per_run"), unit),
+                        "Window": entry.get("window"),
+                    }
+                )
+            sections.append(pd.DataFrame(trend_rows).to_html(index=False))
+
+        for key, label, css in (
+            ("alerts", "Alerts", "<ul class='alerts'>"),
+            ("opportunities", "Opportunities", "<ul class='opportunities'>"),
+            ("volatility", "Volatility", "<ul class='volatility'>"),
+        ):
+            messages = performance.get(key) or []
+            if messages:
+                sections.append(f"<h3>{label}</h3>")
+                sections.append(css)
+                for msg in messages:
+                    sections.append(f"<li>{msg}</li>")
+                sections.append("</ul>")
+
+        notes = performance.get("notes") or []
+        if notes:
+            sections.append("<h3>Notes</h3>")
+            sections.append("<ul class='notes'>")
+            for note in notes:
+                sections.append(f"<li>{note}</li>")
+            sections.append("</ul>")
 
     history_path = Path("reports/run_history.csv")
     if history_path.exists():

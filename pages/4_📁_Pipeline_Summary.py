@@ -28,6 +28,7 @@ kpis = summary.get("kpis", {})
 claims = summary.get("claim_metrics", {})
 documents = summary.get("document_metrics", {})
 ai_research = summary.get("ai_research") or {}
+performance = summary.get("performance_insights") or {}
 
 last_updated = ai_research.get("metadata", {}).get("generated_at")
 if not last_updated and history_df is not None and not history_df.empty:
@@ -71,9 +72,27 @@ if documents:
     docs_delta = _metric_delta("document_documents_processed")
     col6.metric("Documents Parsed", f"{float(documents.get('documents_processed', 0)):.0f}", docs_delta[1])
 
-tabs = st.tabs(["KPIs", "Claims", "Documents", "AI Insights", "Run History", "HTML Report"])
+(
+    tab_kpi,
+    tab_claims,
+    tab_documents,
+    tab_ai,
+    tab_performance,
+    tab_history,
+    tab_html,
+) = st.tabs(
+    [
+        "KPIs",
+        "Claims",
+        "Documents",
+        "AI Insights",
+        "Performance Insights",
+        "Run History",
+        "HTML Report",
+    ]
+)
 
-with tabs[0]:
+with tab_kpi:
     st.markdown("### KPI Table")
     st.dataframe(pd.DataFrame([kpis]))
     if history_df is not None and "kpi_oee" in history_df.columns:
@@ -107,7 +126,7 @@ with tabs[0]:
             )
             st.plotly_chart(fig, use_container_width=True)
 
-with tabs[1]:
+with tab_claims:
     st.markdown("### Claim Metrics")
     st.dataframe(pd.DataFrame([claims]))
     if history_df is not None and {"claim_total_claims", "claim_total_claim_amount"}.issubset(history_df.columns):
@@ -122,14 +141,14 @@ with tabs[1]:
             )
             st.plotly_chart(fig, use_container_width=True)
 
-with tabs[2]:
+with tab_documents:
     st.markdown("### Document Metrics")
     if isinstance(documents, dict):
         st.dataframe(pd.DataFrame([documents]))
     else:
         st.dataframe(pd.DataFrame(documents))
 
-with tabs[3]:
+with tab_ai:
     st.markdown("### AI Research Insights")
     observations = ai_research.get("observations", [])
     if observations:
@@ -170,13 +189,72 @@ with tabs[3]:
     if ai_research.get("metadata"):
         st.caption(f"Generated: {ai_research['metadata'].get('generated_at', 'unknown')}")
 
-with tabs[4]:
+
+def _format_metric(value: float, unit: str) -> str:
+    if value is None or pd.isna(value):
+        return "-"
+    if unit == "%":
+        return f"{float(value):.1f}%"
+    if unit == "currency":
+        return f"${float(value):,.2f}"
+    if isinstance(value, (int, float)):
+        return f"{float(value):.1f}"
+    return str(value)
+
+
+with tab_performance:
+    st.markdown("### Performance Trends")
+    trends = performance.get("trends") or []
+    if trends:
+        rows = []
+        for entry in trends:
+            unit = entry.get("unit", "")
+            rows.append(
+                {
+                    "Metric": entry.get("metric"),
+                    "Status": entry.get("status", "").title(),
+                    "Current": _format_metric(entry.get("current"), unit),
+                    "Previous": _format_metric(entry.get("previous"), unit),
+                    "Δ": _format_metric(entry.get("change"), unit),
+                    "Δ per Run": _format_metric(entry.get("trend_per_run"), unit),
+                    "Window": entry.get("window"),
+                }
+            )
+        st.dataframe(pd.DataFrame(rows))
+    else:
+        st.info("Trend analytics will appear after at least two runs.")
+
+    alerts = performance.get("alerts") or []
+    if alerts:
+        st.markdown("#### Alerts")
+        for alert in alerts:
+            st.error(alert)
+
+    opportunities = performance.get("opportunities") or []
+    if opportunities:
+        st.markdown("#### Opportunities")
+        for note in opportunities:
+            st.success(note)
+
+    volatility = performance.get("volatility") or []
+    if volatility:
+        st.markdown("#### Volatility Watch")
+        for msg in volatility:
+            st.warning(msg)
+
+    notes = performance.get("notes") or []
+    if notes:
+        st.markdown("#### Notes")
+        for msg in notes:
+            st.info(msg)
+
+with tab_history:
     if history_df is None or history_df.empty:
         st.info("History will populate after the first pipeline execution.")
     else:
         st.dataframe(history_df.tail(50), use_container_width=True)
 
-with tabs[5]:
+with tab_html:
     html_path = Path("reports/latest_summary.html")
     if html_path.exists():
         html = html_path.read_text(encoding="utf-8")

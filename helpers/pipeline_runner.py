@@ -10,6 +10,7 @@ from helpers.live_kpi_pipeline import compute_kpis_for_files
 from helpers.html_report import write_html_report
 from helpers.research_planner import ResearchPlanner
 from helpers.run_history import record_run
+from helpers.performance_analyzer import generate_performance_insights
 
 
 def collect_files(paths: Iterable[str]) -> List[str]:
@@ -48,6 +49,9 @@ def run_full_pipeline(files: List[str]) -> Dict[str, Dict]:
     if any(results.values()):
         os.makedirs("reports", exist_ok=True)
 
+        record_run(results)
+        results["performance_insights"] = generate_performance_insights(results)
+
         def _to_serializable(obj):
             if isinstance(obj, dict):
                 return {k: _to_serializable(v) for k, v in obj.items()}
@@ -62,7 +66,6 @@ def run_full_pipeline(files: List[str]) -> Dict[str, Dict]:
 
         with open("reports/latest_summary.json", "w", encoding="utf-8") as fh:
             json.dump(_to_serializable(results), fh, indent=2)
-        record_run(results)
         write_html_report(results)
     return results
 

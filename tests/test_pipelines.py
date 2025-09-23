@@ -11,6 +11,7 @@ from helpers.document_processor import process_documents
 from helpers.claims_pipeline import compute_claim_metrics
 from helpers.live_kpi_pipeline import compute_kpis_for_files
 from helpers.pipeline_runner import run_full_pipeline, collect_files
+from helpers.performance_analyzer import generate_performance_insights
 
 
 def create_png(path: Path, text: str) -> None:
@@ -111,6 +112,7 @@ class TestPipelines(unittest.TestCase):
         self.assertIn("claim_metrics", data)
         self.assertIn("document_metrics", data)
         self.assertIn("ai_research", data)
+        self.assertIn("performance_insights", data)
         self.assertIn("oee", data["kpis"])
 
         research = data["ai_research"]
@@ -139,6 +141,12 @@ class TestPipelines(unittest.TestCase):
         updated_history = pd.read_csv(history)
         self.assertGreater(len(updated_history), initial_rows)
 
+        updated_summary = json.loads(summary.read_text(encoding="utf-8"))
+        insights = updated_summary.get("performance_insights", {})
+        self.assertTrue(isinstance(insights, dict))
+        self.assertIn("trends", insights)
+        self.assertGreaterEqual(len(insights.get("trends", [])), 1)
+
     def test_collect_files(self) -> None:
         txt = Path("sample.txt")
         img_dir = Path("sub")
@@ -151,6 +159,26 @@ class TestPipelines(unittest.TestCase):
         files = collect_files(["."])
         self.assertIn(str(txt), files)
         self.assertIn(str(img), files)
+
+    def test_performance_insights_generation(self) -> None:
+        reports_dir = Path("reports")
+        reports_dir.mkdir(exist_ok=True)
+        history = pd.DataFrame(
+            {
+                "timestamp": pd.date_range("2024-01-01", periods=4, freq="D"),
+                "kpi_oee": [0.75, 0.78, 0.82, 0.86],
+                "kpi_production": [100, 105, 110, 130],
+                "claim_total_claims": [12, 11, 9, 7],
+                "document_documents_processed": [4, 5, 6, 8],
+            }
+        )
+        history.to_csv(reports_dir / "run_history.csv", index=False)
+
+        insights = generate_performance_insights({}, history_path=reports_dir / "run_history.csv")
+        self.assertIn("trends", insights)
+        self.assertTrue(any(t["metric"] == "Overall Equipment Effectiveness" for t in insights["trends"]))
+        self.assertIn("alerts", insights)
+        self.assertIn("opportunities", insights)
 
 
 

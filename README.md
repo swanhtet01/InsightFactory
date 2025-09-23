@@ -17,6 +17,7 @@ A modern, robust KPI dashboard for tyre production analytics. All data is loaded
 - Summary also rendered to `reports/latest_summary.html` for quick human review
 - HTML summary automatically includes the latest run history snapshot so audits have context without opening Streamlit
 - Each run is appended to `reports/run_history.csv` so dashboards can trend KPIs, claims, and document throughput over time
+- Continuous improvement engine analyzes run history to surface KPI/claim/document trends, alerts, and volatility warnings for proactive action
 - AI research layer produces continuous improvement plans and integration steps for CopilotKit and Tongyi DeepResearch, including live API hand-offs when credentials are provided
 - PDF parsing is optional; install `pdfminer.six` if your Drive contains PDFs
 - Unified pipeline runner coordinates KPI, claim, and document processing for easy reuse
@@ -43,7 +44,7 @@ A modern, robust KPI dashboard for tyre production analytics. All data is loaded
 
 ## Dashboards
 - **📊 Operations Command Center** highlights multi-run trends, production throughput, claims exposure, and recommended next steps driven by the AI research planner.
-- **📁 Pipeline Summary** provides a drill-down into the most recent run, including metric tables, charts, and raw HTML exports for compliance snapshots.
+- **📁 Pipeline Summary** provides a drill-down into the most recent run, including metric tables, charts, run history, continuous-improvement insights, and raw HTML exports for compliance snapshots.
 - **🤖 AI Operations Copilot** (existing page) surfaces CopilotKit and DeepResearch readiness plus the recommended enablement roadmap.
 
 ## Testing
