@@ -111,9 +111,22 @@ class TestPipelines(unittest.TestCase):
         self.assertIn("kpis", data)
         self.assertIn("claim_metrics", data)
         self.assertIn("document_metrics", data)
+        self.assertIn("data_profile", data)
+        self.assertIn("run_metadata", data)
         self.assertIn("ai_research", data)
         self.assertIn("performance_insights", data)
         self.assertIn("oee", data["kpis"])
+
+        data_profile = data["data_profile"]
+        self.assertGreaterEqual(data_profile.get("files_profiled", 0), 2)
+        self.assertIn("txt", data_profile.get("extensions", {}))
+        self.assertGreaterEqual(
+            data_profile.get("inputs_received", 0), data_profile.get("total_files", 0)
+        )
+
+        metadata = data["run_metadata"]
+        self.assertIn("duration_seconds", metadata)
+        self.assertIn("reports/latest_summary.html", metadata["reports_written"])
 
         research = data["ai_research"]
         self.assertIn("next_actions", research)
@@ -129,12 +142,17 @@ class TestPipelines(unittest.TestCase):
         html_content = html.read_text(encoding="utf-8")
         self.assertIn("Pipeline Summary", html_content)
         self.assertIn("Run History", html_content)
+        self.assertIn("Data Intake Profile", html_content)
+        self.assertIn("Run Metadata", html_content)
 
         history = Path("reports/run_history.csv")
         self.assertTrue(history.exists())
         history_df = pd.read_csv(history)
         self.assertGreaterEqual(len(history_df), 1)
         self.assertIn("kpi_oee", history_df.columns)
+        self.assertIn("data_profile_inputs_received", history_df.columns)
+        self.assertIn("data_profile_total_files", history_df.columns)
+        self.assertIn("run_metadata_duration_seconds", history_df.columns)
 
         initial_rows = len(history_df)
         run_full_pipeline(collect_files(["."]))
@@ -152,6 +170,10 @@ class TestPipelines(unittest.TestCase):
         img_dir = Path("sub")
         img_dir.mkdir()
         img = img_dir / "sample.png"
+        reports_dir = Path("reports")
+        reports_dir.mkdir()
+        generated = reports_dir / "latest_kpis.csv"
+        generated.write_text("value\n1\n", encoding="utf-8")
 
         txt.write_text("Hello", encoding="utf-8")
         create_png(img, "Hello")
@@ -159,6 +181,7 @@ class TestPipelines(unittest.TestCase):
         files = collect_files(["."])
         self.assertIn(str(txt), files)
         self.assertIn(str(img), files)
+        self.assertNotIn(str(generated), files)
 
     def test_performance_insights_generation(self) -> None:
         reports_dir = Path("reports")

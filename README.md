@@ -17,6 +17,8 @@ A modern, robust KPI dashboard for tyre production analytics. All data is loaded
 - Summary also rendered to `reports/latest_summary.html` for quick human review
 - HTML summary automatically includes the latest run history snapshot so audits have context without opening Streamlit
 - Each run is appended to `reports/run_history.csv` so dashboards can trend KPIs, claims, and document throughput over time
+- Automatic data intake profiling captures file counts, unreadable files, extension mix, volume, and detected granularities for every run
+- Run metadata (duration, files processed, generated reports) is captured alongside analytics for auditable operations
 - Continuous improvement engine analyzes run history to surface KPI/claim/document trends, alerts, and volatility warnings for proactive action
 - AI research layer produces continuous improvement plans and integration steps for CopilotKit and Tongyi DeepResearch, including live API hand-offs when credentials are provided
 - PDF parsing is optional; install `pdfminer.six` if your Drive contains PDFs
@@ -38,9 +40,10 @@ A modern, robust KPI dashboard for tyre production analytics. All data is loaded
 3. Run the full pipeline once: `python -m helpers.pipeline_runner <path> [<path> ...]` where each path can be a file or a directory; directories are scanned recursively. The Drive watcher can also trigger it automatically.
 4. Start the Drive watcher: `python helpers/drive_watcher.py` (runs continuously and computes KPIs, claim metrics, and document extracts for all configured folders)
 5. Run the app: `streamlit run app.py`
-6. Visit the **📊 Operations Command Center** page to review run cadence, trend charts, and AI-driven action plans across plants.
-7. Open the **📁 Pipeline Summary** page to inspect the latest KPI, claim, and document metrics alongside integration telemetry.
-8. All analytics are auto-updated from your Drive folders with results stored in `reports/` (JSON, HTML, CSV history, document extracts).
+6. Visit the **📊 Operations Command Center** page to review run cadence, trend charts, and AI-driven action plans across plants. A new Files Profiled metric highlights ingestion health.
+7. Open the **📁 Pipeline Summary** page to inspect the latest KPI, claim, document, and data intake metrics alongside integration telemetry.
+8. Use the **Data Intake** tab inside the Pipeline Summary to explore file profiling, detected granularities, run duration, and generated report artifacts.
+9. All analytics are auto-updated from your Drive folders with results stored in `reports/` (JSON, HTML, CSV history, document extracts).
 
 ## Dashboards
 - **📊 Operations Command Center** highlights multi-run trends, production throughput, claims exposure, and recommended next steps driven by the AI research planner.

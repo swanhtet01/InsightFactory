@@ -27,10 +27,14 @@ if history_path.exists():
 kpis = summary.get("kpis", {})
 claims = summary.get("claim_metrics", {})
 documents = summary.get("document_metrics", {})
+data_profile = summary.get("data_profile", {})
+run_metadata = summary.get("run_metadata", {})
 ai_research = summary.get("ai_research") or {}
 performance = summary.get("performance_insights") or {}
 
 last_updated = ai_research.get("metadata", {}).get("generated_at")
+if not last_updated and run_metadata.get("started_at"):
+    last_updated = run_metadata["started_at"]
 if not last_updated and history_df is not None and not history_df.empty:
     last_updated = history_df.iloc[-1]["timestamp"]
 if last_updated:
@@ -59,7 +63,7 @@ if kpis:
     col2.metric("First Pass Yield", f"{float(kpis.get('fpy', 0))*100:.1f}%", fpy_delta)
     col3.metric("Units Produced", f"{float(kpis.get('production', 0)):.0f}", prod_delta)
 
-col4, col5, col6 = st.columns(3)
+col4, col5, col6, col7 = st.columns(4)
 if claims:
     total_claims = float(claims.get("total_claims", 0))
     total_amount = float(claims.get("total_claim_amount", 0))
@@ -72,10 +76,21 @@ if documents:
     docs_delta = _metric_delta("document_documents_processed")
     col6.metric("Documents Parsed", f"{float(documents.get('documents_processed', 0)):.0f}", docs_delta[1])
 
+if data_profile:
+    files_delta = _metric_delta("data_profile_total_files")
+    col7.metric(
+        "Files Profiled",
+        f"{int(data_profile.get('files_profiled', data_profile.get('total_files', 0)))}",
+        files_delta[1],
+    )
+else:
+    col7.metric("Files Profiled", "0")
+
 (
     tab_kpi,
     tab_claims,
     tab_documents,
+    tab_data,
     tab_ai,
     tab_performance,
     tab_history,
@@ -85,6 +100,7 @@ if documents:
         "KPIs",
         "Claims",
         "Documents",
+        "Data Intake",
         "AI Insights",
         "Performance Insights",
         "Run History",
@@ -147,6 +163,78 @@ with tab_documents:
         st.dataframe(pd.DataFrame([documents]))
     else:
         st.dataframe(pd.DataFrame(documents))
+
+with tab_data:
+    st.markdown("### Data Intake Overview")
+    if not data_profile and not run_metadata:
+        st.info("Data profiling metrics will appear after the first run.")
+    else:
+        if data_profile:
+            col_a, col_b, col_c = st.columns(3)
+            total_files = int(data_profile.get("total_files", 0))
+            files_profiled = int(data_profile.get("files_profiled", total_files))
+            unreadable = int(data_profile.get("unreadable_files", 0))
+            inputs_received = int(
+                data_profile.get("inputs_received", files_profiled)
+            )
+            col_a.metric("Inputs Received", f"{inputs_received}")
+            col_b.metric("Unique Files", f"{total_files}")
+            col_c.metric("Files Profiled", f"{files_profiled}")
+
+            size_mb = data_profile.get("total_bytes", 0) / (1024 ** 2)
+            avg_kb = (
+                data_profile.get("average_bytes", 0) / 1024 if files_profiled else 0
+            )
+            metric_col1, metric_col2 = st.columns(2)
+            metric_col1.metric("Data Volume", f"{size_mb:.2f} MB")
+            metric_col2.metric("Average File Size", f"{avg_kb:.2f} KB")
+            if unreadable:
+                st.warning(
+                    f"{unreadable} file(s) were unreadable during the last run. Check permissions or formats."
+                )
+
+            if data_profile.get("extensions"):
+                ext_df = pd.DataFrame(
+                    [
+                        {"Extension": ext, "Files": count}
+                        for ext, count in sorted(
+                            data_profile["extensions"].items(),
+                            key=lambda kv: (-kv[1], kv[0]),
+                        )
+                    ]
+                )
+                st.markdown("#### Files by Type")
+                st.dataframe(ext_df, use_container_width=True)
+
+            if data_profile.get("sample_files"):
+                st.markdown("#### Sample Files")
+                for sample in data_profile["sample_files"]:
+                    st.write(f"- {sample}")
+
+            if data_profile.get("granularity_tags"):
+                st.markdown("#### Detected Granularity Tags")
+                st.write(", ".join(data_profile["granularity_tags"]))
+
+        if run_metadata:
+            st.markdown("### Run Metadata")
+            meta_col1, meta_col2, meta_col3 = st.columns(3)
+            if run_metadata.get("duration_seconds") is not None:
+                meta_col1.metric(
+                    "Duration (s)",
+                    f"{float(run_metadata['duration_seconds']):.2f}",
+                )
+            if run_metadata.get("files_collected") is not None:
+                meta_col2.metric(
+                    "Files Collected", f"{int(run_metadata['files_collected'])}"
+                )
+            if run_metadata.get("files_profiled") is not None:
+                meta_col3.metric(
+                    "Files Profiled", f"{int(run_metadata['files_profiled'])}"
+                )
+            if run_metadata.get("reports_written"):
+                st.markdown("#### Reports Written")
+                for report in run_metadata["reports_written"]:
+                    st.write(f"- {report}")
 
 with tab_ai:
     st.markdown("### AI Research Insights")

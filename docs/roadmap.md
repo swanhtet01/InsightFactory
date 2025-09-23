@@ -39,3 +39,5 @@
    trend visualisations in the Streamlit UI.
 4. Integrate alerting by pushing high-severity research planner recommendations to Slack or email so
    operations staff can act immediately.
+5. Extend the new data profiling layer with schema drift detection, row-count parity checks, and automated
+   data quality scoring to guarantee reliable ERP/MES reporting inputs.

@@ -42,7 +42,7 @@ if len(history) > 1:
     if pd.notna(cadence):
         st.caption(f"Median cadence between runs: {cadence}")
 
-col1, col2, col3, col4 = st.columns(4)
+col1, col2, col3, col4, col5 = st.columns(5)
 
 if "kpi_oee" in latest_row:
     oee_curr = float(latest_row.get("kpi_oee", 0)) * 100
@@ -76,9 +76,22 @@ if "claim_total_claims" in latest_row:
     claim_delta = (
         claim_curr - float(previous_row.get("claim_total_claims", 0))
         if previous_row is not None and pd.notna(previous_row.get("claim_total_claims"))
-        else 0
+    else 0
     )
     col4.metric("Claims Processed", f"{claim_curr:.0f}", f"{claim_delta:+.0f}" if previous_row is not None else None)
+
+if "data_profile_files_profiled" in latest_row:
+    files_curr = float(latest_row.get("data_profile_files_profiled", 0))
+    files_delta = (
+        files_curr - float(previous_row.get("data_profile_files_profiled", 0))
+        if previous_row is not None and pd.notna(previous_row.get("data_profile_files_profiled"))
+        else 0
+    )
+    col5.metric(
+        "Files Profiled",
+        f"{files_curr:.0f}",
+        f"{files_delta:+.0f}" if previous_row is not None else None,
+    )
 
 st.markdown("---")
 

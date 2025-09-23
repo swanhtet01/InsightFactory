@@ -1,5 +1,5 @@
 """Generate a simple HTML report from pipeline summary data."""
-from typing import Dict, Any
+from typing import Dict, Any, Iterable
 import os
 from pathlib import Path
 import pandas as pd
@@ -48,6 +48,57 @@ def write_html_report(summary: Dict, path: str = "reports/latest_summary.html") 
         else:
             sections.append(pd.DataFrame([doc_metrics]).to_html(index=False))
 
+    data_profile = summary.get("data_profile") or {}
+    if data_profile:
+        sections.append("<h2>Data Intake Profile</h2>")
+        overview_rows = []
+        overview_mapping = [
+            ("Inputs received", data_profile.get("inputs_received")),
+            ("Unique files", data_profile.get("total_files")),
+            ("Files profiled", data_profile.get("files_profiled")),
+            ("Unreadable files", data_profile.get("unreadable_files")),
+            (
+                "Total volume (MB)",
+                f"{data_profile.get('total_bytes', 0) / (1024 ** 2):.2f}",
+            ),
+            (
+                "Average file size (KB)",
+                f"{data_profile.get('average_bytes', 0) / 1024:.2f}",
+            ),
+            ("Earliest modified", data_profile.get("earliest_modified")),
+            ("Latest modified", data_profile.get("latest_modified")),
+        ]
+        for label, value in overview_mapping:
+            if value not in (None, ""):
+                overview_rows.append({"Metric": label, "Value": value})
+        if overview_rows:
+            sections.append(pd.DataFrame(overview_rows).to_html(index=False))
+
+        extensions = data_profile.get("extensions") or {}
+        if extensions:
+            ext_rows = [
+                {"Extension": ext, "Files": count}
+                for ext, count in sorted(extensions.items(), key=lambda kv: (-kv[1], kv[0]))
+            ]
+            sections.append("<h3>Files by Type</h3>")
+            sections.append(pd.DataFrame(ext_rows).to_html(index=False))
+
+        def _render_list(items: Iterable[str], title: str) -> None:
+            seq = [item for item in items if item]
+            if not seq:
+                return
+            sections.append(f"<h3>{title}</h3>")
+            sections.append("<ul>")
+            for item in seq:
+                sections.append(f"<li>{item}</li>")
+            sections.append("</ul>")
+
+        _render_list(data_profile.get("sample_files", []), "Sample Files")
+        _render_list(
+            data_profile.get("granularity_tags", []),
+            "Detected Granularity Tags",
+        )
+
     ai_research = summary.get("ai_research") or {}
     if ai_research:
         sections.append("<h2>AI Research Insights</h2>")
@@ -78,6 +129,33 @@ def write_html_report(summary: Dict, path: str = "reports/latest_summary.html") 
                     "Error": info.get("error"),
                 })
             sections.append(pd.DataFrame(rows).to_html(index=False))
+
+    run_metadata = summary.get("run_metadata") or {}
+    if run_metadata:
+        sections.append("<h2>Run Metadata</h2>")
+        metadata_rows = []
+        for key, label in (
+            ("started_at", "Started"),
+            ("duration_seconds", "Duration (s)"),
+            ("files_collected", "Files Collected"),
+            ("files_profiled", "Files Profiled"),
+        ):
+            value = run_metadata.get(key)
+            if value in (None, ""):
+                continue
+            if isinstance(value, float):
+                value = f"{value:.3f}" if key == "duration_seconds" else f"{value:.1f}"
+            metadata_rows.append({"Metric": label, "Value": value})
+        reports_written = run_metadata.get("reports_written") or []
+        if reports_written:
+            metadata_rows.append(
+                {
+                    "Metric": "Reports Written",
+                    "Value": ", ".join(reports_written),
+                }
+            )
+        if metadata_rows:
+            sections.append(pd.DataFrame(metadata_rows).to_html(index=False))
 
     performance = summary.get("performance_insights") or {}
     if performance:
