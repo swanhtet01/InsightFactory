@@ -147,6 +147,7 @@ def get_insights(_: str = Depends(get_api_key)) -> dict[str, Any]:
         "ai_research": summary.get("ai_research", {}),
         "performance_insights": summary.get("performance_insights", {}),
         "autonomy_plan": summary.get("autonomy_plan", {}),
+        "system_health": summary.get("system_health", {}),
         "run_metadata": summary.get("run_metadata", {}),
     }
 

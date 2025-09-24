@@ -34,6 +34,7 @@ data_sources = summary.get("data_sources") or {}
 run_metadata = summary.get("run_metadata", {})
 ai_research = summary.get("ai_research") or {}
 performance = summary.get("performance_insights") or {}
+system_health = summary.get("system_health") or {}
 
 last_updated = ai_research.get("metadata", {}).get("generated_at")
 if not last_updated and run_metadata.get("started_at"):
@@ -120,11 +121,34 @@ if autonomy_plan:
     if immediate:
         highlights.append(f"Autonomy plan suggests: {immediate[0]}")
 
+if system_health and system_health.get("signals"):
+    highlights.extend(system_health["signals"][:2])
+
 if highlights:
     for item in highlights[:8]:
         st.markdown(f"- {item}")
 else:
     st.info("Run the unified pipeline to populate highlights and recommended actions.")
+
+if system_health:
+    st.markdown("### Health Scorecard")
+    overall = system_health.get("overall_score")
+    status = system_health.get("status")
+    cols = st.columns([1, 2])
+    with cols[0]:
+        if overall is not None:
+            st.metric("Overall Health", f"{float(overall):.1f}", status.replace("_", " ").title() if status else None)
+        elif status:
+            st.metric("Overall Health", status.replace("_", " ").title())
+    with cols[1]:
+        components = system_health.get("components") or []
+        if components:
+            st.dataframe(pd.DataFrame(components))
+        signals = system_health.get("signals") or []
+        if signals:
+            st.markdown("**Attention Items**")
+            for signal in signals:
+                st.markdown(f"- {signal}")
 
 (
     tab_kpi,

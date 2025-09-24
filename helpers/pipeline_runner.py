@@ -18,6 +18,7 @@ from helpers.performance_analyzer import generate_performance_insights
 from helpers.autonomy_orchestrator import generate_autonomy_plan
 from helpers.data_profiler import profile_files
 from helpers.source_registry import load_latest_sync
+from helpers.health_evaluator import evaluate_system_health
 
 
 EXCLUDED_DIR_NAMES = {
@@ -84,6 +85,8 @@ def run_full_pipeline(files: List[str]) -> Dict[str, Dict]:
     planner = ResearchPlanner.from_env()
     results["ai_research"] = planner.generate_insights(results)
 
+    results["system_health"] = evaluate_system_health(results)
+
     if any(results.values()):
         os.makedirs("reports", exist_ok=True)
 
@@ -103,6 +106,10 @@ def run_full_pipeline(files: List[str]) -> Dict[str, Dict]:
             "files_profiled": data_profile.get("files_profiled", 0) if data_profile else 0,
             "reports_written": [],
         }
+
+        health_status = results.get("system_health", {}).get("status")
+        if health_status:
+            results["run_metadata"]["health_status"] = health_status
 
         if source_snapshot:
             results["run_metadata"]["sources_tracked"] = len(

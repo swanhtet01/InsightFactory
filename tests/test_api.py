@@ -32,6 +32,7 @@ class TestInsightFactoryAPI(unittest.TestCase):
             "ai_research": {"next_actions": ["Tighten curing schedule"]},
             "performance_insights": {"forecast_notes": ["Production trending +5%"]},
             "autonomy_plan": {"immediate_actions": ["Dispatch maintenance"]},
+            "system_health": {"overall_score": 82.5, "status": "excellent"},
             "run_metadata": {"duration_seconds": 42},
         }
         (reports_dir / "latest_summary.json").write_text(
@@ -72,6 +73,17 @@ class TestInsightFactoryAPI(unittest.TestCase):
         payload = response.json()
         self.assertEqual(payload["kpis"]["production"], 1250)
         self.assertIn("autonomy_plan", payload)
+        self.assertEqual(payload["system_health"]["status"], "excellent")
+
+    def test_insights_endpoint(self) -> None:
+        response = self.client.get(
+            "/api/insights",
+            headers={self.config.INSIGHT_API_KEY_HEADER: "secret-key"},
+        )
+        self.assertEqual(response.status_code, 200)
+        payload = response.json()
+        self.assertIn("system_health", payload)
+        self.assertEqual(payload["system_health"]["status"], "excellent")
 
     def test_run_history_limit(self) -> None:
         response = self.client.get(

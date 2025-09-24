@@ -55,6 +55,7 @@ def flatten_summary(summary: Dict[str, Any]) -> Dict[str, Any]:
         "document_metrics": "document",
         "ai_research": "ai",
         "autonomy_plan": "autonomy",
+        "system_health": "system_health",
     }
     for key, value in summary.items():
         prefix = prefix_map.get(key, str(key))

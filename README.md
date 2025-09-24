@@ -22,6 +22,7 @@ A modern, robust KPI dashboard for tyre production analytics. All data is loaded
 - Run metadata (duration, files processed, generated reports) is captured alongside analytics for auditable operations
 - Continuous improvement engine analyzes run history to surface KPI/claim/document trends, alerts, and volatility warnings for proactive action
 - Forecast engine projects KPI trajectories and target attainment windows for forward-looking planning
+- Health scorecard synthesizes KPI, claim, document, and data intake context into an overall readiness score
 - AI research layer produces continuous improvement plans and integration steps for CopilotKit and Tongyi DeepResearch, including live API hand-offs when credentials are provided
 - Autonomous operations planner recommends immediate actions, automation opportunities, and agent readiness so the system can self-steer
 - PDF parsing is optional; install `pdfminer.six` if your Drive contains PDFs
@@ -53,11 +54,11 @@ A modern, robust KPI dashboard for tyre production analytics. All data is loaded
 - Launch the FastAPI service with `uvicorn api:app --reload` to expose read-only ERP-friendly endpoints.
 - Secure requests by setting `INSIGHT_API_KEY` (required) and optionally `API_ALLOWED_ORIGINS`/`REPORTS_DIR` via environment variables or `.env`.
 - `GET /api/summary` returns the latest unified pipeline JSON summary, while `GET /api/run-history?limit=10` streams historical runs for dashboards.
-- `GET /api/insights` bundles AI research notes, performance forecasts, and the autonomous operations plan; `GET /api/report/html` serves the rendered report snapshot for compliance archives.
+- `GET /api/insights` bundles AI research notes, performance forecasts, the system-health scorecard, and the autonomous operations plan; `GET /api/report/html` serves the rendered report snapshot for compliance archives.
 
 ## Dashboards
 - **📊 Operations Command Center** highlights multi-run trends, production throughput, claims exposure, and recommended next steps driven by the AI research planner.
-- **📁 Pipeline Summary** provides a drill-down into the most recent run, including metric tables, charts, run history, continuous-improvement insights, the autonomous operations plan, and raw HTML exports for compliance snapshots.
+- **📁 Pipeline Summary** provides a drill-down into the most recent run, including metric tables, charts, the health scorecard, run history, continuous-improvement insights, the autonomous operations plan, and raw HTML exports for compliance snapshots.
 - **🤖 AI Operations Copilot** (existing page) surfaces CopilotKit and DeepResearch readiness plus the recommended enablement roadmap.
 
 ## Testing

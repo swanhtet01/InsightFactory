@@ -32,6 +32,36 @@ def write_html_report(summary: Dict, path: str = "reports/latest_summary.html") 
 
     sections = ["<html>", "<body>", "<h1>Pipeline Summary</h1>"]
 
+    system_health = summary.get("system_health") or {}
+    if system_health:
+        overall = system_health.get("overall_score")
+        status = system_health.get("status")
+        if overall is not None or status:
+            sections.append("<h2>Health Scorecard</h2>")
+            rows = []
+            if overall is not None:
+                rows.append({"Metric": "Overall score", "Value": f"{float(overall):.1f}"})
+            if status:
+                rows.append({"Metric": "Status", "Value": status.replace("_", " ").title()})
+            for component in system_health.get("components", []):
+                rows.append(
+                    {
+                        "Metric": component.get("name"),
+                        "Value": f"{float(component.get('score', 0)):.1f}",
+                        "Status": component.get("status", ""),
+                        "Detail": component.get("detail", ""),
+                    }
+                )
+            if rows:
+                sections.append(pd.DataFrame(rows).to_html(index=False))
+            signals = system_health.get("signals") or []
+            if signals:
+                sections.append("<h3>Attention Items</h3>")
+                sections.append("<ul>")
+                for signal in signals:
+                    sections.append(f"<li>{signal}</li>")
+                sections.append("</ul>")
+
     if summary.get("kpis"):
         sections.append("<h2>KPIs</h2>")
         sections.append(pd.DataFrame([summary["kpis"]]).to_html(index=False))

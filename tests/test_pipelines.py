@@ -1,9 +1,9 @@
+import json
 import os
 import shutil
 import tempfile
 from pathlib import Path
 import unittest
-import json
 
 import pandas as pd
 
@@ -147,6 +147,7 @@ class TestPipelines(unittest.TestCase):
         self.assertIn("ai_research", data)
         self.assertIn("performance_insights", data)
         self.assertIn("autonomy_plan", data)
+        self.assertIn("system_health", data)
         self.assertIn("oee", data["kpis"])
 
         data_profile = data["data_profile"]
@@ -160,6 +161,7 @@ class TestPipelines(unittest.TestCase):
         self.assertIn("duration_seconds", metadata)
         self.assertIn("reports/latest_summary.html", metadata["reports_written"])
         self.assertEqual(metadata.get("sources_tracked"), 2)
+        self.assertEqual(metadata.get("health_status"), data["system_health"].get("status"))
 
         sources = data["data_sources"]
         self.assertEqual(sources.get("total_files"), 2)
@@ -184,6 +186,7 @@ class TestPipelines(unittest.TestCase):
         self.assertTrue(html.exists())
         html_content = html.read_text(encoding="utf-8")
         self.assertIn("Pipeline Summary", html_content)
+        self.assertIn("Health Scorecard", html_content)
         self.assertIn("Run History", html_content)
         self.assertIn("Data Intake Profile", html_content)
         self.assertIn("Run Metadata", html_content)
@@ -198,6 +201,7 @@ class TestPipelines(unittest.TestCase):
         self.assertIn("data_profile_total_files", history_df.columns)
         self.assertIn("run_metadata_duration_seconds", history_df.columns)
         self.assertIn("autonomy_immediate_actions", history_df.columns)
+        self.assertIn("system_health_status", history_df.columns)
 
         initial_rows = len(history_df)
         run_full_pipeline(collect_files(["."]))
