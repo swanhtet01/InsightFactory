@@ -1,4 +1,5 @@
 import os
+from pathlib import Path
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -6,6 +7,13 @@ load_dotenv()
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY", "")
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "")
 GITHUB_TOKEN = os.getenv("GITHUB_TOKEN", "")
+INSIGHT_API_KEY = os.getenv("INSIGHT_API_KEY", "")
+INSIGHT_API_KEY_HEADER = os.getenv("INSIGHT_API_KEY_HEADER", "X-API-Key")
+
+_origins = [origin.strip() for origin in os.getenv("API_ALLOWED_ORIGINS", "*").split(",") if origin.strip()]
+API_ALLOWED_ORIGINS = _origins or ["*"]
+
+REPORTS_DIR = Path(os.getenv("REPORTS_DIR", "reports")).expanduser().resolve()
 
 # Support multiple Drive folders via comma-separated environment variable.
 GOOGLE_DRIVE_FOLDER_IDS = [

@@ -4,6 +4,7 @@
 - Automated Drive sync, KPI, claim, and document extraction pipelines feed `reports/` artifacts.
 - AI Research Planner generates CopilotKit and Tongyi DeepResearch integration steps after every run.
 - Streamlit Pipeline Summary page presents KPIs, claims, documents, and AI recommendations.
+- FastAPI gateway exposes summaries, run history, and AI guidance for ERP or CopilotKit consumers.
 
 ## Near-Term Enhancements
 1. **CopilotKit Embedding**

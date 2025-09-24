@@ -49,6 +49,12 @@ A modern, robust KPI dashboard for tyre production analytics. All data is loaded
 9. Use the **Data Intake** tab inside the Pipeline Summary to explore file profiling, detected granularities, per-source coverage, run duration, and generated report artifacts.
 10. All analytics are auto-updated from your Drive folders with results stored in `reports/` (JSON, HTML, CSV history, document extracts).
 
+## REST API
+- Launch the FastAPI service with `uvicorn api:app --reload` to expose read-only ERP-friendly endpoints.
+- Secure requests by setting `INSIGHT_API_KEY` (required) and optionally `API_ALLOWED_ORIGINS`/`REPORTS_DIR` via environment variables or `.env`.
+- `GET /api/summary` returns the latest unified pipeline JSON summary, while `GET /api/run-history?limit=10` streams historical runs for dashboards.
+- `GET /api/insights` bundles AI research notes, performance forecasts, and the autonomous operations plan; `GET /api/report/html` serves the rendered report snapshot for compliance archives.
+
 ## Dashboards
 - **📊 Operations Command Center** highlights multi-run trends, production throughput, claims exposure, and recommended next steps driven by the AI research planner.
 - **📁 Pipeline Summary** provides a drill-down into the most recent run, including metric tables, charts, run history, continuous-improvement insights, the autonomous operations plan, and raw HTML exports for compliance snapshots.

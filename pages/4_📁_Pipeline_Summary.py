@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import json
 from pathlib import Path
 
@@ -86,6 +88,43 @@ if data_profile:
     )
 else:
     col7.metric("Files Profiled", "0")
+
+st.markdown("### Highlights")
+highlights: list[str] = []
+
+if run_metadata:
+    duration = run_metadata.get("duration_seconds")
+    if duration is not None:
+        highlights.append(f"Last run completed in {float(duration):.1f} seconds.")
+    reports_written = run_metadata.get("reports_written") or []
+    if reports_written:
+        highlights.append(
+            f"Generated {len(reports_written)} report artifact(s) including {reports_written[-1]}."
+        )
+
+if performance:
+    notes = performance.get("forecast_notes") or []
+    highlights.extend(notes)
+    trends = performance.get("alerts") or []
+    highlights.extend(trends)
+
+if ai_research:
+    next_actions = ai_research.get("next_actions") or []
+    highlights.extend(next_actions[:3])
+    observations = ai_research.get("observations") or []
+    highlights.extend(observations[:2])
+
+autonomy_plan = summary.get("autonomy_plan") or {}
+if autonomy_plan:
+    immediate = autonomy_plan.get("immediate_actions") or []
+    if immediate:
+        highlights.append(f"Autonomy plan suggests: {immediate[0]}")
+
+if highlights:
+    for item in highlights[:8]:
+        st.markdown(f"- {item}")
+else:
+    st.info("Run the unified pipeline to populate highlights and recommended actions.")
 
 (
     tab_kpi,
