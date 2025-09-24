@@ -1,223 +1,215 @@
+from __future__ import annotations
 
-import streamlit as st
+import json
+from pathlib import Path
+from typing import Any, Iterable
+
 import pandas as pd
-from datetime import datetime, timedelta
-import plotly.express as px
-import plotly.graph_objects as go
-from helpers.data_loader import load_data
-from helpers.github_uploader import start_github_sync
-from helpers.kpi_engine import KPIAgent
-from config import TRANSLATIONS
+import streamlit as st
 
-# Functions
-def get_latest_production_data():
-    """Get the latest production data from the data folder"""
-    return load_data()
+from config import REPORTS_DIR
 
-# Start GitHub sync in background
-github_manager = start_github_sync()
 
-# Add monitoring thread for autonomous optimization
-import threading
-def monitor_dashboard():
-    import time
-    while True:
-        # Load latest data
-        latest_df = get_latest_production_data()
-        if not latest_df.empty:
-            # Log metrics to status.log
-            metrics = {
-                'timestamp': datetime.now().isoformat(),
-                'data_rows': len(latest_df),
-                'last_update': latest_df['date'].max().strftime('%Y-%m-%d %H:%M:%S'),
-                'kpis_present': list(latest_df.columns),
-                'health': 'good' if len(latest_df) > 0 else 'warning'
-            }
-            with open('status.log', 'a') as f:
-                f.write(f"[{datetime.now().isoformat()}] Dashboard metrics: {metrics}\n")
-        time.sleep(300)  # Check every 5 minutes
+st.set_page_config(page_title="InsightFactory Control Center", layout="wide")
+st.title("🚀 InsightFactory Control Center")
 
-monitor_thread = threading.Thread(target=monitor_dashboard, daemon=True)
-monitor_thread.start()
+LATEST_SUMMARY = REPORTS_DIR / "latest_summary.json"
+LATEST_DASHBOARD = REPORTS_DIR / "latest_dashboard.json"
+RUN_HISTORY = REPORTS_DIR / "run_history.csv"
 
-st.set_page_config(page_title="Tyre Factory KPI Dashboard", layout="wide")
-st.title("📊 Tyre Factory KPI Dashboard")
 
-# Set default language
-if 'lang' not in st.session_state:
-    st.session_state.lang = 'en'
-lang = st.session_state.lang
+def _load_json(path: Path) -> dict[str, Any] | None:
+    """Return parsed JSON if the file exists."""
 
-# --- Load and check data ---
-with st.spinner("Loading production data from Excel files in data/ ..."):
-    df = load_data()
-if df.empty:
-    st.error("No valid data found in the data/ folder. Please check your Excel files.")
+    if not path.exists():
+        return None
+    try:
+        with path.open(encoding="utf-8") as handle:
+            return json.load(handle)
+    except json.JSONDecodeError:
+        st.error(f"{path.name} is not valid JSON. Rerun the pipeline to refresh artifacts.")
+        return None
+
+
+def _format_timestamp(raw: str | None) -> str | None:
+    if not raw:
+        return None
+    parsed = pd.to_datetime(raw, errors="coerce")
+    if pd.isna(parsed):
+        return None
+    return parsed.strftime("%d %b %Y • %H:%M UTC")
+
+
+def _render_metrics(metrics: Iterable[dict[str, Any]]) -> None:
+    metrics = list(metrics)
+    for offset in range(0, len(metrics), 3):
+        cols = st.columns(3)
+        for column, metric in zip(cols, metrics[offset : offset + 3]):
+            label = metric.get("label", "Metric")
+            value = metric.get("value", "—")
+            delta = metric.get("delta")
+            status = metric.get("status")
+            help_text = None
+            if status == "excellent":
+                help_text = "Performance exceeds the configured target range."
+            elif status == "stable":
+                help_text = "Within expected bounds. Keep monitoring upcoming runs."
+            elif status == "attention":
+                help_text = "Below plan. Inspect root causes in the Pipeline Summary."
+            column.metric(label, value, delta=delta, help=help_text)
+
+
+def _render_bullets(title: str, items: Iterable[str]) -> None:
+    items = [item for item in items if item]
+    if not items:
+        return
+    st.markdown(f"#### {title}")
+    for item in items:
+        st.markdown(f"- {item}")
+
+
+def _render_run_history(path: Path, limit: int = 10) -> None:
+    if not path.exists():
+        return
+    try:
+        history = pd.read_csv(path)
+    except Exception:
+        st.warning("Could not parse run_history.csv. Delete the file and rerun the pipeline.")
+        return
+    if history.empty:
+        return
+    history = history.tail(limit).copy()
+    if "timestamp" in history.columns:
+        history["timestamp"] = pd.to_datetime(history["timestamp"], errors="coerce")
+        history["timestamp"] = history["timestamp"].dt.strftime("%Y-%m-%d %H:%M")
+    st.dataframe(history, use_container_width=True, hide_index=True)
+
+
+def _render_data_profile(profile: dict[str, Any]) -> None:
+    counts = {
+        "Inputs": profile.get("inputs_received"),
+        "Files Profiled": profile.get("files_profiled"),
+        "Unreadable": profile.get("unreadable_files"),
+        "Extensions": ", ".join(
+            f"{ext}×{count}" for ext, count in sorted((profile.get("extensions") or {}).items())
+        ),
+    }
+    cols = st.columns(len(counts))
+    for column, (label, value) in zip(cols, counts.items()):
+        column.metric(label, value if value is not None else "—")
+    if profile.get("granularity_tags"):
+        st.caption("Detected granularity: " + ", ".join(profile["granularity_tags"]))
+    if profile.get("sample_files"):
+        with st.expander("Sample files profiled"):
+            for sample in profile["sample_files"]:
+                st.write(sample)
+
+
+summary = _load_json(LATEST_SUMMARY)
+dashboard = _load_json(LATEST_DASHBOARD)
+
+if not summary:
+    st.info(
+        "Run the unified pipeline to generate analytics before launching the dashboard. "
+        "Use the CLI below or start the Drive watcher for continuous updates."
+    )
+    st.code("python -m helpers.pipeline_runner data", language="bash")
     st.stop()
-df = df.copy()
-if 'date' in df.columns:
-    df['date'] = pd.to_datetime(df['date'], errors='coerce')
-    df = df.drop_duplicates(subset=['date', 'tyre_size']).sort_values('date')
 
-# --- KPI Metrics ---
-def safe_mean(series):
-    return float(series.mean()) if not series.empty else 0
+run_metadata = summary.get("run_metadata", {})
+refreshed_at = _format_timestamp(run_metadata.get("started_at")) or _format_timestamp(
+    (dashboard or {}).get("generated_at")
+)
+if refreshed_at:
+    st.caption(f"Last refreshed: {refreshed_at}")
 
-oee = safe_mean(df['oee']) if 'oee' in df.columns else 0
-fpy = safe_mean(df['fpy']) if 'fpy' in df.columns else 0
-prod = df['quantity'].sum() if 'quantity' in df.columns else 0
-target = df['target'].sum() if 'target' in df.columns else 0
-target_ach = (prod / target * 100) if target > 0 else 0
-quality_rate = (df['a_grade'].sum() / (df['a_grade'].sum() + df['b_grade'].sum()) * 100) if 'a_grade' in df.columns and 'b_grade' in df.columns and (df['a_grade'].sum() + df['b_grade'].sum()) > 0 else 0
-scrap_rate = (df['scrap'].sum() / prod * 100) if 'scrap' in df.columns and prod > 0 else 0
+overview_tab, data_tab, guidance_tab = st.tabs([
+    "Overview",
+    "Data Intake",
+    "Operations Guide",
+])
 
-col1, col2, col3 = st.columns(3)
-col1.metric("OEE (%)", f"{oee:.1f}")
-col1.metric("FPY (%)", f"{fpy:.1f}")
-col2.metric("Production", f"{prod:,.0f} units")
-col2.metric("Target Achievement (%)", f"{target_ach:.1f}")
-col3.metric("Quality Rate (%)", f"{quality_rate:.1f}")
-col3.metric("Scrap Rate (%)", f"{scrap_rate:.2f}")
+with overview_tab:
+    st.subheader("Latest Run Snapshot")
+    overview_cols = st.columns(4)
+    overview_cols[0].metric("Files Processed", run_metadata.get("files_collected", "—"))
+    overview_cols[1].metric("Duration (s)", run_metadata.get("duration_seconds", "—"))
+    overview_cols[2].metric("Reports Generated", len(run_metadata.get("reports_written", [])))
+    overview_cols[3].metric("Sources Tracked", run_metadata.get("sources_tracked", "—"))
 
-# --- KPI Trends ---
-st.markdown("---")
-st.subheader("KPI Trends (7-day Rolling Average)")
-kpi_trends = {
-    'OEE (%)': 'oee',
-    'FPY (%)': 'fpy',
-    'Production Quantity': 'quantity',
-    'Scrap Rate (%)': 'scrap',
-}
-for label, col in kpi_trends.items():
-    if col in df.columns and 'date' in df.columns:
-        trend = df.sort_values('date').set_index('date')[col].rolling(window=7, min_periods=3).mean()
-        fig = go.Figure()
-        fig.add_trace(go.Scatter(x=trend.index, y=trend.values, mode='lines+markers', name=f'{label} (7d avg)'))
-        fig.update_layout(title=f"{label} (7d Rolling Avg)", xaxis_title="Date", yaxis_title=label, template="plotly_white")
-        st.plotly_chart(fig, use_container_width=True)
-
-# --- Data Table ---
-st.markdown("---")
-st.subheader("Raw Data Preview")
-st.dataframe(df.head(20), use_container_width=True)
-
-# --- Footer ---
-st.markdown("---")
-st.caption("© 2025 Tyre Factory KPI Dashboard | Built for Fortune 500 standards. For help, contact your analytics team.")
-t = TRANSLATIONS[lang]
-
-# Title
-st.title(t['title'])
-
-def format_number(num):
-    """Format large numbers for display"""
-    if num >= 1000000:
-        return f"{num/1000000:.1f}M"
-    elif num >= 1000:
-        return f"{num/1000:.1f}K"
-    return f"{num:.0f}"
-
-def calculate_trend(current, previous):
-    """Calculate trend percentage"""
-    if previous == 0:
-        return 0
-    return ((current - previous) / previous) * 100
-
-def filter_data_by_date(df, period):
-    """Filter dataframe based on selected time period"""
-    if df.empty:
-        return df
-        
-    now = datetime.now()
-    if period == "Last 24 Hours":
-        return df[df['timestamp'] >= now - timedelta(days=1)]
-    elif period == "Last 7 Days":
-        return df[df['timestamp'] >= now - timedelta(days=7)]
-    elif period == "Last 30 Days":
-        return df[df['timestamp'] >= now - timedelta(days=30)]
-    elif period == "This Month":
-        return df[df['timestamp'].dt.month == now.month]
-    elif period == "This Year":
-        return df[df['timestamp'].dt.year == now.year]
-    return df
-
-def main():
-    st.title("🏭 Tyre Production Dashboard")
-    
-    # Date filters
-    col1, col2 = st.columns(2)
-    with col1:
-        date_range = st.selectbox(
-            "Time Period",
-            ["Last 24 Hours", "Last 7 Days", "Last 30 Days", "This Month", "This Year"]
+    health = summary.get("system_health") or {}
+    if health:
+        st.subheader("System Health")
+        health_cols = st.columns([1, 2])
+        overall_score = health.get("overall_score")
+        status = health.get("status")
+        label = status.replace("_", " ").title() if isinstance(status, str) else None
+        health_cols[0].metric(
+            "Overall Score",
+            f"{overall_score:.1f}" if isinstance(overall_score, (float, int)) else "—",
+            label,
         )
-    
-    # Load and process data
-    with st.spinner("Loading latest production data..."):
-        df = get_latest_production_data()
-    if df.empty:
-        st.error("No production data found. Please check data sources.")
-        return
-    filtered_df = filter_data_by_date(df, date_range)
-    if filtered_df.empty:
-        st.warning(f"No data available for the selected period: {date_range}")
-        return
+        components = health.get("components")
+        if components:
+            health_cols[1].dataframe(pd.DataFrame(components), use_container_width=True)
 
-    # --- Use KPIAgent to analyze and display KPIs ---
-    agent = KPIAgent(filtered_df)
-    st.subheader("Production KPIs & Insights")
-    st.markdown(f"""
-        <div class="kpi-card">
-            <pre style='font-size: 1.1em'>{agent.summary()}</pre>
-        </div>
-    """, unsafe_allow_html=True)
+    if dashboard and dashboard.get("hero_metrics"):
+        st.subheader("Hero Metrics")
+        _render_metrics(dashboard["hero_metrics"])
 
-    # Optionally, show more detailed charts if enough data is present
-    if 'date' in filtered_df.columns and 'quantity' in filtered_df.columns:
-        st.subheader("Production Trend")
-        daily_prod = filtered_df.groupby(filtered_df['date'])['quantity'].sum().reset_index()
-        fig = px.line(daily_prod, x='date', y='quantity', title="Daily Production")
-        st.plotly_chart(fig, use_container_width=True)
+    insights = summary.get("performance_insights", {})
+    with st.expander("Performance insights", expanded=bool(insights)):
+        _render_bullets("Trend Highlights", insights.get("trends", []))
+        _render_bullets("Alerts", insights.get("alerts", []))
+        _render_bullets("Opportunities", insights.get("opportunities", []))
+        _render_bullets("Forecast", insights.get("forecast_notes", insights.get("forecasts", [])))
+        _render_bullets("Volatility", insights.get("volatility", []))
 
-    if 'tyre_size' in filtered_df.columns and ('quantity' in filtered_df.columns or 'total' in filtered_df.columns):
-        qty_col = 'quantity' if 'quantity' in filtered_df.columns else 'total'
-        st.subheader("Production by Tyre Size")
-        size_prod = filtered_df.groupby('tyre_size')[qty_col].sum().reset_index()
-        size_prod = size_prod.sort_values(qty_col, ascending=True)
-        fig = px.bar(size_prod, x=qty_col, y='tyre_size', orientation='h',
-                    title="Production by Tyre Size",
-                    labels={'tyre_size': 'Tyre Size', qty_col: 'Production Quantity'})
-        st.plotly_chart(fig, use_container_width=True)
+    autonomy = summary.get("autonomy_plan", {})
+    with st.expander("Autonomous operations plan", expanded=False):
+        _render_bullets("Immediate Actions", autonomy.get("actions", []))
+        _render_bullets("Automation Opportunities", autonomy.get("automation_opportunities", []))
+        _render_bullets("Readiness", autonomy.get("agent_readiness", []))
 
-    # Data sources info
-    st.sidebar.title("Data Sources")
-    st.sidebar.markdown(f"Last Updated: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
-    if 'source' in filtered_df.columns:
-        sources = filtered_df['source'].unique()
-        for source in sources:
-            source_df = filtered_df[filtered_df['source'] == source]
-            st.sidebar.markdown(f"**{source.title()} Data:**")
-            st.sidebar.markdown(f"- Records: {len(source_df):,}")
-            if 'date' in source_df.columns:
-                st.sidebar.markdown(f"- Date Range: {source_df['date'].min()} to {source_df['date'].max()}")
-        # Production by tyre size
-        size_prod = filtered_df.groupby('tyre_size')['quantity'].sum().reset_index()
-        size_prod = size_prod.sort_values('quantity', ascending=True)
-        fig = px.bar(size_prod, x='quantity', y='tyre_size', orientation='h',
-                    title="Production by Tyre Size",
-                    labels={'tyre_size': 'Tyre Size', 'quantity': 'Production Quantity'})
-        st.plotly_chart(fig, use_container_width=True)
-    
-    # Data sources info
-    st.sidebar.title("Data Sources")
-    st.sidebar.markdown(f"Last Updated: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
-    
-    sources = filtered_df['source'].unique()
-    for source in sources:
-        source_df = filtered_df[filtered_df['source'] == source]
-        st.sidebar.markdown(f"**{source.title()} Data:**")
-        st.sidebar.markdown(f"- Records: {len(source_df):,}")
-        st.sidebar.markdown(f"- Date Range: {source_df['date'].min()} to {source_df['date'].max()}")
+    st.subheader("Recent Runs")
+    _render_run_history(RUN_HISTORY)
 
-if __name__ == "__main__":
-    main()
+    st.divider()
+    st.subheader("Explore the full experience")
+    nav_cols = st.columns(3)
+    nav_cols[0].page_link("pages/1_🏠_Executive_Overview.py", label="Executive Overview")
+    nav_cols[1].page_link("pages/2_📊_Operations_Command_Center.py", label="Operations Command Center")
+    nav_cols[2].page_link("pages/4_📁_Pipeline_Summary.py", label="Pipeline Summary")
+    st.page_link("pages/5_🤖_AI_Operations_Copilot.py", label="AI Operations Copilot", icon="🤖")
+
+with data_tab:
+    st.subheader("Data Intake Profile")
+    profile = summary.get("data_profile")
+    if profile:
+        _render_data_profile(profile)
+    else:
+        st.info("Run the pipeline with the profiling helper enabled to see intake statistics.")
+
+    data_sources = summary.get("data_sources")
+    if data_sources:
+        st.markdown("#### Source Coverage")
+        st.metric("Tracked Files", data_sources.get("total_files", "—"))
+        folders = data_sources.get("folders")
+        if folders:
+            st.dataframe(pd.DataFrame(folders), use_container_width=True)
+
+with guidance_tab:
+    st.subheader("Keep the analytics fresh")
+    st.markdown(
+        "Run the unified pipeline whenever new spreadsheets, claims, or documents land in your Drive folders."
+    )
+    st.code("python -m helpers.pipeline_runner <file-or-directory> [...]")
+    st.markdown(
+        "Launch the Drive watcher for hands-free updates once credentials are configured:"
+    )
+    st.code("python helpers/drive_watcher.py")
+    st.markdown("Expose insights to downstream tools via the REST API:")
+    st.code("uvicorn api:app --reload")
+    st.markdown(
+        "Need help wiring CopilotKit or Tongyi DeepResearch? Visit the AI Operations Copilot page for status and next steps."
+    )
