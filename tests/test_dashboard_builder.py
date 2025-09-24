@@ -2,6 +2,7 @@ import importlib
 import json
 import os
 import tempfile
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 import unittest
 
@@ -78,6 +79,7 @@ class TestDashboardBuilder(unittest.TestCase):
 
     def test_build_dashboard_payload(self) -> None:
         summary = self._summary_payload()
+        summary["run_metadata"]["started_at"] = datetime.now(timezone.utc).isoformat()
         history = [
             {
                 "timestamp": "2024-01-09T03:00:00Z",
@@ -120,6 +122,19 @@ class TestDashboardBuilder(unittest.TestCase):
         intake = payload["data_intake"]
         self.assertEqual(intake["files_profiled"], 12)
         self.assertIn("daily", intake["granularity_tags"])
+
+        freshness = payload["freshness"]
+        self.assertEqual(freshness["status"], "fresh")
+        self.assertIn("Pipeline executed", freshness["message"])
+
+    def test_freshness_categories(self) -> None:
+        summary = self._summary_payload()
+        now = datetime.now(timezone.utc)
+
+        for minutes, expected in ((30, "fresh"), (120, "stale"), (480, "overdue")):
+            summary["run_metadata"]["started_at"] = (now - timedelta(minutes=minutes)).isoformat()
+            payload = self.dashboard_builder.build_dashboard_payload(summary, [])
+            self.assertEqual(payload["freshness"]["status"], expected)
 
     def test_write_dashboard_persists_file(self) -> None:
         summary = self._summary_payload()

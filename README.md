@@ -16,6 +16,7 @@ A modern, robust KPI dashboard for tyre production analytics. All data is loaded
 - All pipeline outputs aggregated into `reports/latest_summary.json` for downstream systems
 - Summary also rendered to `reports/latest_summary.html` for quick human review
 - Executive dashboard payload exported to `reports/latest_dashboard.json` for lightweight web clients
+- Dashboard payload includes freshness scoring so operations know when KPIs need a refresh
 - HTML summary automatically includes the latest run history snapshot so audits have context without opening Streamlit
 - Each run is appended to `reports/run_history.csv` so dashboards can trend KPIs, claims, and document throughput over time
 - Automatic data intake profiling captures file counts, unreadable files, extension mix, volume, and detected granularities for every run
@@ -46,6 +47,7 @@ A modern, robust KPI dashboard for tyre production analytics. All data is loaded
 4. Start the Drive watcher: `python helpers/drive_watcher.py` (runs continuously and computes KPIs, claim metrics, and document extracts for all configured folders)
 5. Run the app: `streamlit run app.py`
 6. Start on the **🚀 InsightFactory Control Center** home page to confirm the latest run status, system health, recent history, and quick navigation to deeper dashboards.
+   The freshness banner highlights when analytics are stale and need a rerun.
 7. Visit the **🏠 Executive Overview** page for a curated leadership view of hero metrics, trend charts, health signals, and next best actions.
 8. Visit the **📊 Operations Command Center** page to review run cadence, trend charts, and AI-driven action plans across plants. A new Files Profiled metric highlights ingestion health.
 9. Open the **📁 Pipeline Summary** page to inspect the latest KPI, claim, document, and data intake metrics alongside integration telemetry.

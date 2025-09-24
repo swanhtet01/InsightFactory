@@ -105,6 +105,30 @@ def _render_data_profile(profile: dict[str, Any]) -> None:
                 st.write(sample)
 
 
+def _render_freshness(freshness: dict[str, Any]) -> None:
+    if not freshness:
+        return
+
+    status = freshness.get("status")
+    message = freshness.get("message") or "Pipeline run status unavailable."
+    last_run = _format_timestamp(freshness.get("last_run_at"))
+    age_minutes = freshness.get("age_minutes")
+
+    details = message
+    if age_minutes is not None:
+        details += f" (Age: {age_minutes:.1f} minutes)"
+    if last_run:
+        details += f" Last run: {last_run}."
+
+    renderer = {
+        "fresh": st.success,
+        "stale": st.warning,
+        "overdue": st.error,
+    }.get(status, st.info)
+
+    renderer(details)
+
+
 summary = _load_json(LATEST_SUMMARY)
 dashboard = _load_json(LATEST_DASHBOARD)
 
@@ -131,6 +155,7 @@ overview_tab, data_tab, guidance_tab = st.tabs([
 
 with overview_tab:
     st.subheader("Latest Run Snapshot")
+    _render_freshness(dashboard.get("freshness") if dashboard else None)
     overview_cols = st.columns(4)
     overview_cols[0].metric("Files Processed", run_metadata.get("files_collected", "—"))
     overview_cols[1].metric("Duration (s)", run_metadata.get("duration_seconds", "—"))

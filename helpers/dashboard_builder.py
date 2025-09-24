@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Mapping, Sequence
 import json
@@ -285,6 +286,52 @@ def _trend_series(history: HistoryContext) -> list[dict[str, Any]]:
     return series
 
 
+def _parse_timestamp(value: Any) -> datetime | None:
+    if not value or not isinstance(value, str):
+        return None
+    cleaned = value.strip()
+    if not cleaned:
+        return None
+    if cleaned.endswith("Z"):
+        cleaned = cleaned[:-1] + "+00:00"
+    try:
+        parsed = datetime.fromisoformat(cleaned)
+    except ValueError:
+        return None
+    if parsed.tzinfo is None:
+        parsed = parsed.replace(tzinfo=timezone.utc)
+    return parsed.astimezone(timezone.utc)
+
+
+def _freshness_metadata(
+    run_metadata: Mapping[str, Any], history: HistoryContext
+) -> dict[str, Any]:
+    reference = run_metadata.get("started_at") or (history.latest() or {}).get("timestamp")
+    parsed = _parse_timestamp(reference)
+    if not parsed:
+        return {"status": "unknown", "message": "No completed pipeline run detected."}
+
+    now = datetime.now(timezone.utc)
+    age_minutes = (now - parsed).total_seconds() / 60
+
+    if age_minutes <= 60:
+        status = "fresh"
+        message = "Pipeline executed within the past hour."
+    elif age_minutes <= 180:
+        status = "stale"
+        message = "Pipeline output is a few hours old—consider refreshing soon."
+    else:
+        status = "overdue"
+        message = "Pipeline has not run recently; refresh to avoid stale KPIs."
+
+    return {
+        "status": status,
+        "last_run_at": parsed.isoformat(),
+        "age_minutes": round(age_minutes, 1),
+        "message": message,
+    }
+
+
 def build_dashboard_payload(
     summary: Mapping[str, Any],
     history_records: Sequence[Mapping[str, Any]] | None = None,
@@ -293,6 +340,8 @@ def build_dashboard_payload(
 
     history = HistoryContext(tuple(history_records or ()))
     run_metadata = summary.get("run_metadata") or {}
+
+    freshness = _freshness_metadata(run_metadata, history)
 
     payload = {
         "generated_at": run_metadata.get("started_at")
@@ -304,6 +353,7 @@ def build_dashboard_payload(
         "data_sources": _data_sources_panel(summary),
         "trend_series": _trend_series(history),
         "system_health": summary.get("system_health") or {},
+        "freshness": freshness,
     }
     return payload
 
