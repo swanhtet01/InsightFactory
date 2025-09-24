@@ -86,3 +86,7 @@ A modern, robust KPI dashboard for tyre production analytics. All data is loaded
 - Only keep files and modules listed above. Remove legacy/unused files for clarity.
 - For help, contact your analytics team.
 - Continuous integration runs `python -m py_compile` and the unit test suite for reliability (see `.github/workflows/ci.yml`).
+
+## Architecture & Strategic Planning
+- Review the [System Blueprint](docs/architecture/system_blueprint.md) for an end-to-end view of the layered architecture, autonomous agent responsibilities, and the staged upgrade waves that push InsightFactory toward an elite-yet-lightweight ERP/MES fabric.
+- Consult the [Expansion Roadmap](docs/roadmap.md) and [Team Backlog](docs/team_backlog.md) to coordinate execution, CI/CD hardening, and continuous improvement loops aligned with the blueprint.
