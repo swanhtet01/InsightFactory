@@ -8,6 +8,8 @@ import json
 import os
 import time
 
+import pandas as pd
+
 from config import REPORTS_DIR
 from helpers.claims_pipeline import compute_claim_metrics
 from helpers.document_processor import process_documents
@@ -21,6 +23,7 @@ from helpers.data_profiler import profile_files
 from helpers.source_registry import load_latest_sync
 from helpers.health_evaluator import evaluate_system_health
 from helpers.serialization import to_serializable
+from helpers.dashboard_builder import write_dashboard
 
 
 EXCLUDED_DIR_NAMES = {
@@ -125,6 +128,7 @@ def run_full_pipeline(files: List[str]) -> Dict[str, Dict]:
             [
                 str(REPORTS_DIR / "latest_summary.json"),
                 str(REPORTS_DIR / "latest_summary.html"),
+                str(REPORTS_DIR / "latest_dashboard.json"),
             ]
         )
         pending_row = flatten_summary(results)
@@ -133,7 +137,14 @@ def run_full_pipeline(files: List[str]) -> Dict[str, Dict]:
         )
         results["autonomy_plan"] = generate_autonomy_plan(results)
         results["run_metadata"]["reports_written"] = sorted(set(outputs))
-        record_run(results)
+        history_path = record_run(results)
+        try:
+            history_df = pd.read_csv(history_path)
+            history_records = history_df.to_dict(orient="records")
+        except (FileNotFoundError, pd.errors.EmptyDataError):
+            history_records = []
+        dashboard_payload = write_dashboard(results, history_records)
+        results["dashboard"] = dashboard_payload
         summary_path = REPORTS_DIR / "latest_summary.json"
         with summary_path.open("w", encoding="utf-8") as fh:
             json.dump(to_serializable(results), fh, indent=2)

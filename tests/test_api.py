@@ -49,6 +49,16 @@ class TestInsightFactoryAPI(unittest.TestCase):
         )
         history_df.to_csv(reports_dir / "run_history.csv", index=False)
         (reports_dir / "latest_summary.html").write_text("<h1>Summary</h1>", encoding="utf-8")
+        (reports_dir / "latest_dashboard.json").write_text(
+            json.dumps(
+                {
+                    "hero_metrics": [
+                        {"label": "Overall Equipment Effectiveness", "value": "92.0%"}
+                    ]
+                }
+            ),
+            encoding="utf-8",
+        )
 
         self.client = TestClient(self.api.app)
 
@@ -107,6 +117,19 @@ class TestInsightFactoryAPI(unittest.TestCase):
         )
         self.assertEqual(response.status_code, 200)
         self.assertIn("Summary", response.text)
+
+    def test_dashboard_endpoint(self) -> None:
+        response = self.client.get(
+            "/api/dashboard",
+            headers={self.config.INSIGHT_API_KEY_HEADER: "secret-key"},
+        )
+        self.assertEqual(response.status_code, 200)
+        payload = response.json()
+        self.assertIn("hero_metrics", payload)
+        self.assertEqual(
+            payload["hero_metrics"][0]["label"],
+            "Overall Equipment Effectiveness",
+        )
 
     def test_health_endpoint(self) -> None:
         response = self.client.get("/api/health")

@@ -15,6 +15,7 @@ A modern, robust KPI dashboard for tyre production analytics. All data is loaded
 - Document word counts tracked in `reports/latest_doc_metrics.csv` for quick sizing insights
 - All pipeline outputs aggregated into `reports/latest_summary.json` for downstream systems
 - Summary also rendered to `reports/latest_summary.html` for quick human review
+- Executive dashboard payload exported to `reports/latest_dashboard.json` for lightweight web clients
 - HTML summary automatically includes the latest run history snapshot so audits have context without opening Streamlit
 - Each run is appended to `reports/run_history.csv` so dashboards can trend KPIs, claims, and document throughput over time
 - Automatic data intake profiling captures file counts, unreadable files, extension mix, volume, and detected granularities for every run
@@ -44,19 +45,22 @@ A modern, robust KPI dashboard for tyre production analytics. All data is loaded
 3. Run the full pipeline once: `python -m helpers.pipeline_runner <path> [<path> ...]` where each path can be a file or a directory; directories are scanned recursively. The Drive watcher can also trigger it automatically.
 4. Start the Drive watcher: `python helpers/drive_watcher.py` (runs continuously and computes KPIs, claim metrics, and document extracts for all configured folders)
 5. Run the app: `streamlit run app.py`
-6. Visit the **📊 Operations Command Center** page to review run cadence, trend charts, and AI-driven action plans across plants. A new Files Profiled metric highlights ingestion health.
-7. Open the **📁 Pipeline Summary** page to inspect the latest KPI, claim, document, and data intake metrics alongside integration telemetry.
-8. Visit the **Autonomy Plan** tab inside the Pipeline Summary to review immediate actions, automation opportunities, and the status of the autonomous agents orchestrating the pipelines.
-9. Use the **Data Intake** tab inside the Pipeline Summary to explore file profiling, detected granularities, per-source coverage, run duration, and generated report artifacts.
-10. All analytics are auto-updated from your Drive folders with results stored in `reports/` (JSON, HTML, CSV history, document extracts).
+6. Visit the **🏠 Executive Overview** page for a curated leadership view of hero metrics, trend charts, health signals, and next best actions.
+7. Visit the **📊 Operations Command Center** page to review run cadence, trend charts, and AI-driven action plans across plants. A new Files Profiled metric highlights ingestion health.
+8. Open the **📁 Pipeline Summary** page to inspect the latest KPI, claim, document, and data intake metrics alongside integration telemetry.
+9. Visit the **Autonomy Plan** tab inside the Pipeline Summary to review immediate actions, automation opportunities, and the status of the autonomous agents orchestrating the pipelines.
+10. Use the **Data Intake** tab inside the Pipeline Summary to explore file profiling, detected granularities, per-source coverage, run duration, and generated report artifacts.
+11. All analytics are auto-updated from your Drive folders with results stored in `reports/` (JSON, HTML, CSV history, document extracts).
 
 ## REST API
 - Launch the FastAPI service with `uvicorn api:app --reload` to expose read-only ERP-friendly endpoints.
 - Secure requests by setting `INSIGHT_API_KEY` (required) and optionally `API_ALLOWED_ORIGINS`/`REPORTS_DIR` via environment variables or `.env`.
 - `GET /api/summary` returns the latest unified pipeline JSON summary, while `GET /api/run-history?limit=10` streams historical runs for dashboards.
 - `GET /api/insights` bundles AI research notes, performance forecasts, the system-health scorecard, and the autonomous operations plan; `GET /api/report/html` serves the rendered report snapshot for compliance archives.
+- `GET /api/dashboard` returns the curated executive dashboard payload for lightweight portals or CopilotKit extensions.
 
 ## Dashboards
+- **🏠 Executive Overview** provides hero metrics, run-to-run trends, health signals, data intake status, and next best actions in a single glance.
 - **📊 Operations Command Center** highlights multi-run trends, production throughput, claims exposure, and recommended next steps driven by the AI research planner.
 - **📁 Pipeline Summary** provides a drill-down into the most recent run, including metric tables, charts, the health scorecard, run history, continuous-improvement insights, the autonomous operations plan, and raw HTML exports for compliance snapshots.
 - **🤖 AI Operations Copilot** (existing page) surfaces CopilotKit and DeepResearch readiness plus the recommended enablement roadmap.

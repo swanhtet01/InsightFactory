@@ -20,6 +20,7 @@ from helpers import (
     html_report,
     integration_clients,
     research_planner,
+    dashboard_builder,
 )
 
 
@@ -51,6 +52,7 @@ class TestPipelines(unittest.TestCase):
             research_planner,
             source_registry,
             performance_analyzer,
+            dashboard_builder,
             pipeline_runner,
         ]:
             importlib.reload(module)
@@ -174,6 +176,7 @@ class TestPipelines(unittest.TestCase):
         self.assertIn("performance_insights", data)
         self.assertIn("autonomy_plan", data)
         self.assertIn("system_health", data)
+        self.assertIn("dashboard", data)
         self.assertIn("oee", data["kpis"])
 
         data_profile = data["data_profile"]
@@ -186,7 +189,9 @@ class TestPipelines(unittest.TestCase):
         metadata = data["run_metadata"]
         self.assertIn("duration_seconds", metadata)
         expected_html_entry = str(self.reports_dir / "latest_summary.html")
+        expected_dashboard_entry = str(self.reports_dir / "latest_dashboard.json")
         self.assertIn(expected_html_entry, metadata["reports_written"])
+        self.assertIn(expected_dashboard_entry, metadata["reports_written"])
         self.assertEqual(metadata.get("sources_tracked"), 2)
         self.assertEqual(metadata.get("health_status"), data["system_health"].get("status"))
 
@@ -198,6 +203,12 @@ class TestPipelines(unittest.TestCase):
         research = data["ai_research"]
         self.assertIn("next_actions", research)
         self.assertTrue(research["next_actions"])
+
+        dashboard_path = self.reports_dir / "latest_dashboard.json"
+        self.assertTrue(dashboard_path.exists())
+        dashboard = json.loads(dashboard_path.read_text(encoding="utf-8"))
+        self.assertIn("hero_metrics", dashboard)
+        self.assertGreater(len(dashboard["hero_metrics"]), 0)
         self.assertIn("tooling", research)
         self.assertIn("copilotkit", research["tooling"])
         self.assertIn("deep_research", research["tooling"])

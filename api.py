@@ -21,6 +21,7 @@ from config import (
 SUMMARY_FILENAME = "latest_summary.json"
 HISTORY_FILENAME = "run_history.csv"
 HTML_FILENAME = "latest_summary.html"
+DASHBOARD_FILENAME = "latest_dashboard.json"
 
 
 def _ensure_reports_dir() -> Path:
@@ -68,6 +69,18 @@ def _load_html_report() -> str:
     return path.read_text(encoding="utf-8")
 
 
+def _load_dashboard() -> dict[str, Any]:
+    reports_dir = _ensure_reports_dir()
+    path = reports_dir / DASHBOARD_FILENAME
+    if not path.exists():
+        raise HTTPException(
+            status_code=404,
+            detail="Dashboard payload not found. Execute the pipeline to generate reports.",
+        )
+    with path.open(encoding="utf-8") as fh:
+        return json.load(fh)
+
+
 API_KEY_HEADER = APIKeyHeader(name=INSIGHT_API_KEY_HEADER, auto_error=False)
 
 
@@ -110,6 +123,7 @@ def root() -> dict[str, Any]:
             "/api/run-history",
             "/api/insights",
             "/api/report/html",
+            "/api/dashboard",
         ],
     }
 
@@ -156,6 +170,11 @@ def get_insights(_: str = Depends(get_api_key)) -> dict[str, Any]:
 def get_html_report(_: str = Depends(get_api_key)) -> Response:
     html = _load_html_report()
     return Response(content=html, media_type="text/html")
+
+
+@app.get("/api/dashboard", tags=["analytics"])
+def get_dashboard(_: str = Depends(get_api_key)) -> dict[str, Any]:
+    return _load_dashboard()
 
 
 if __name__ == "__main__":  # pragma: no cover - manual launch convenience
