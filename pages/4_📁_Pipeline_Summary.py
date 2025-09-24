@@ -93,6 +93,7 @@ else:
     tab_documents,
     tab_data,
     tab_ai,
+    tab_autonomy,
     tab_performance,
     tab_history,
     tab_html,
@@ -103,6 +104,7 @@ else:
         "Documents",
         "Data Intake",
         "AI Insights",
+        "Autonomy Plan",
         "Performance Insights",
         "Run History",
         "HTML Report",
@@ -341,6 +343,57 @@ with tab_ai:
                     st.json(info["data"])
     if ai_research.get("metadata"):
         st.caption(f"Generated: {ai_research['metadata'].get('generated_at', 'unknown')}")
+
+with tab_autonomy:
+    st.markdown("### Autonomous Operations Plan")
+    autonomy = summary.get("autonomy_plan") or {}
+    if not autonomy:
+        st.info("Autonomy planner will populate after the first full pipeline run.")
+    else:
+        immediate = autonomy.get("immediate_actions") or []
+        automation = autonomy.get("automation_opportunities") or []
+        monitoring_items = autonomy.get("monitoring") or []
+
+        col_a, col_b = st.columns(2)
+        with col_a:
+            st.markdown("#### Immediate Actions")
+            if immediate:
+                for item in immediate:
+                    st.write(f"- {item}")
+            else:
+                st.write("No urgent actions identified.")
+        with col_b:
+            st.markdown("#### Automation Opportunities")
+            if automation:
+                for item in automation:
+                    st.write(f"- {item}")
+            else:
+                st.write("All automation hooks are configured.")
+
+        st.markdown("#### Monitoring Watchlist")
+        if monitoring_items:
+            for item in monitoring_items:
+                st.write(f"- {item}")
+        else:
+            st.write("No alerts at this time.")
+
+        agents = autonomy.get("agents") or []
+        if agents:
+            st.markdown("#### Agent Roster")
+            agent_df = pd.DataFrame(agents)
+            if not agent_df.empty:
+                st.dataframe(
+                    agent_df.rename(
+                        columns={
+                            "name": "Agent",
+                            "status": "Status",
+                            "description": "Description",
+                            "triggers": "Triggers",
+                            "next_steps": "Next Steps",
+                        }
+                    ),
+                    use_container_width=True,
+                )
 
 
 def _format_metric(value: float, unit: str) -> str:

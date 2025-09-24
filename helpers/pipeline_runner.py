@@ -13,8 +13,9 @@ from helpers.document_processor import process_documents
 from helpers.live_kpi_pipeline import compute_kpis_for_files
 from helpers.html_report import write_html_report
 from helpers.research_planner import ResearchPlanner
-from helpers.run_history import record_run
+from helpers.run_history import record_run, flatten_summary
 from helpers.performance_analyzer import generate_performance_insights
+from helpers.autonomy_orchestrator import generate_autonomy_plan
 from helpers.data_profiler import profile_files
 from helpers.source_registry import load_latest_sync
 
@@ -108,7 +109,6 @@ def run_full_pipeline(files: List[str]) -> Dict[str, Dict]:
                 source_snapshot.get("folders", [])
             )
 
-        record_run(results)
         outputs.append("reports/run_history.csv")
         outputs.extend(
             [
@@ -116,8 +116,13 @@ def run_full_pipeline(files: List[str]) -> Dict[str, Dict]:
                 "reports/latest_summary.html",
             ]
         )
+        pending_row = flatten_summary(results)
+        results["performance_insights"] = generate_performance_insights(
+            results, pending_row=pending_row
+        )
+        results["autonomy_plan"] = generate_autonomy_plan(results)
         results["run_metadata"]["reports_written"] = sorted(set(outputs))
-        results["performance_insights"] = generate_performance_insights(results)
+        record_run(results)
 
         def _to_serializable(obj):
             if isinstance(obj, dict):

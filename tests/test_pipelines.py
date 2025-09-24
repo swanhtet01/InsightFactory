@@ -146,6 +146,7 @@ class TestPipelines(unittest.TestCase):
         self.assertIn("data_sources", data)
         self.assertIn("ai_research", data)
         self.assertIn("performance_insights", data)
+        self.assertIn("autonomy_plan", data)
         self.assertIn("oee", data["kpis"])
 
         data_profile = data["data_profile"]
@@ -174,6 +175,11 @@ class TestPipelines(unittest.TestCase):
         self.assertIn("integrations", research)
         self.assertEqual(research["integrations"]["copilotkit"]["status"], "disabled")
 
+        autonomy = data["autonomy_plan"]
+        self.assertIn("immediate_actions", autonomy)
+        self.assertIn("agents", autonomy)
+        self.assertTrue(autonomy["agents"])
+
         html = Path("reports/latest_summary.html")
         self.assertTrue(html.exists())
         html_content = html.read_text(encoding="utf-8")
@@ -181,6 +187,7 @@ class TestPipelines(unittest.TestCase):
         self.assertIn("Run History", html_content)
         self.assertIn("Data Intake Profile", html_content)
         self.assertIn("Run Metadata", html_content)
+        self.assertIn("Autonomous Operations Plan", html_content)
 
         history = Path("reports/run_history.csv")
         self.assertTrue(history.exists())
@@ -190,6 +197,7 @@ class TestPipelines(unittest.TestCase):
         self.assertIn("data_profile_inputs_received", history_df.columns)
         self.assertIn("data_profile_total_files", history_df.columns)
         self.assertIn("run_metadata_duration_seconds", history_df.columns)
+        self.assertIn("autonomy_immediate_actions", history_df.columns)
 
         initial_rows = len(history_df)
         run_full_pipeline(collect_files(["."]))
@@ -201,6 +209,8 @@ class TestPipelines(unittest.TestCase):
         self.assertTrue(isinstance(insights, dict))
         self.assertIn("trends", insights)
         self.assertGreaterEqual(len(insights.get("trends", [])), 1)
+        self.assertIn("forecasts", insights)
+        self.assertIn("forecast_notes", insights)
 
     def test_collect_files(self) -> None:
         txt = Path("sample.txt")
@@ -239,6 +249,9 @@ class TestPipelines(unittest.TestCase):
         self.assertTrue(any(t["metric"] == "Overall Equipment Effectiveness" for t in insights["trends"]))
         self.assertIn("alerts", insights)
         self.assertIn("opportunities", insights)
+        self.assertIn("forecasts", insights)
+        self.assertIsInstance(insights["forecasts"], list)
+        self.assertIn("forecast_notes", insights)
 
 
 

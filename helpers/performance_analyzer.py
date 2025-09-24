@@ -3,7 +3,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Dict, Iterable, List, Optional
+from typing import Any, Dict, Iterable, List, Optional, Tuple
 
 import numpy as np
 import pandas as pd
@@ -97,13 +97,15 @@ def _load_history(path: Path = HISTORY_PATH) -> pd.DataFrame:
     return history
 
 
-def _polyfit_slope(values: pd.Series) -> float:
+def _fit_trend(values: pd.Series) -> Tuple[float, float]:
+    """Return slope and intercept for a first-order polynomial fit."""
+
     if len(values) < 2:
-        return 0.0
+        return 0.0, float(values.iloc[-1]) if len(values) == 1 else 0.0
     x = np.arange(len(values), dtype=float)
     y = values.to_numpy(dtype=float)
-    slope = np.polyfit(x, y, 1)[0]
-    return float(slope)
+    slope, intercept = np.polyfit(x, y, 1)
+    return float(slope), float(intercept)
 
 
 def _status_from_slope(slope: float, direction: str, significant: bool) -> str:
@@ -144,16 +146,25 @@ def generate_performance_insights(
     summary: Dict[str, Any],
     history_path: Path = HISTORY_PATH,
     metrics: Iterable[MetricConfig] = METRICS,
+    pending_row: Optional[Dict[str, Any]] = None,
 ) -> Dict[str, Any]:
     """Analyze recent history and surface trend insights for dashboards."""
 
     history = _load_history(history_path)
+    if pending_row:
+        pending_df = pd.DataFrame([pending_row])
+        if history.empty:
+            history = pending_df
+        else:
+            history = pd.concat([history, pending_df], ignore_index=True, sort=False)
     insights: Dict[str, Any] = {
         "trends": [],
         "alerts": [],
         "opportunities": [],
         "volatility": [],
         "notes": [],
+        "forecasts": [],
+        "forecast_notes": [],
     }
 
     if history.empty:
@@ -175,7 +186,7 @@ def generate_performance_insights(
             )
             continue
 
-        slope = _polyfit_slope(window_values)
+        slope, _ = _fit_trend(window_values)
         current = float(window_values.iloc[-1])
         previous = float(window_values.iloc[-2])
         change = current - previous
@@ -186,6 +197,49 @@ def generate_performance_insights(
 
         significant = abs(cumulative_change) >= metric.minimum_delta
         status = _status_from_slope(slope, metric.direction, significant)
+
+        next_raw = current + slope
+        forecast_next = next_raw * metric.scale
+
+        target_scaled: Optional[float] = None
+        runs_to_target: Optional[float] = None
+
+        if metric.direction == "up" and metric.alert_below is not None:
+            target_raw = metric.alert_below
+            target_scaled = target_raw * metric.scale
+            if current >= target_raw:
+                runs_to_target = 0.0
+            elif slope > 0:
+                runs_to_target = (target_raw - current) / slope
+            else:
+                insights["forecast_notes"].append(
+                    f"{metric.label} is below target ({_format_unit(target_scaled, metric.unit)}), "
+                    "but the trend is flat or negative."
+                )
+        elif metric.direction == "down" and metric.alert_above is not None:
+            if metric.scale:
+                target_raw = metric.alert_above / metric.scale
+            else:
+                target_raw = metric.alert_above
+            target_scaled = metric.alert_above
+            if scaled_current <= metric.alert_above:
+                runs_to_target = 0.0
+            elif slope < 0:
+                runs_to_target = (current - target_raw) / abs(slope)
+            else:
+                insights["forecast_notes"].append(
+                    f"{metric.label} is above its ceiling ({_format_unit(target_scaled, metric.unit)}), "
+                    "but the trend is not improving."
+                )
+
+        if runs_to_target is not None and runs_to_target > 0:
+            insights["forecast_notes"].append(
+                f"{metric.label} projected to hit target in approximately {runs_to_target:.1f} runs."
+            )
+        elif runs_to_target == 0:
+            insights["forecast_notes"].append(
+                f"{metric.label} is meeting the configured target threshold."
+            )
 
         trend_entry = {
             "metric": metric.label,
@@ -198,8 +252,21 @@ def generate_performance_insights(
             "unit": metric.unit,
             "trend_per_run": slope * metric.scale,
             "cumulative_change": cumulative_change,
+            "forecast_next": forecast_next,
+            "forecast_target": target_scaled,
+            "forecast_runs_to_target": runs_to_target,
         }
         insights["trends"].append(trend_entry)
+
+        insights["forecasts"].append(
+            {
+                "metric": metric.label,
+                "next": forecast_next,
+                "runs_to_target": runs_to_target,
+                "target": target_scaled,
+                "unit": metric.unit,
+            }
+        )
 
         if metric.alert_below is not None and scaled_current < metric.alert_below * metric.scale:
             insights["alerts"].append(

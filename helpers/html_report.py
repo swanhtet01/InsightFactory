@@ -242,6 +242,54 @@ def write_html_report(summary: Dict, path: str = "reports/latest_summary.html") 
                 sections.append(f"<li>{note}</li>")
             sections.append("</ul>")
 
+        forecast_notes = performance.get("forecast_notes") or []
+        if forecast_notes:
+            sections.append("<h3>Forecast Highlights</h3>")
+            sections.append("<ul class='forecast-notes'>")
+            for note in forecast_notes:
+                sections.append(f"<li>{note}</li>")
+            sections.append("</ul>")
+
+    autonomy = summary.get("autonomy_plan") or {}
+    if autonomy:
+        sections.append("<h2>Autonomous Operations Plan</h2>")
+        if autonomy.get("immediate_actions"):
+            sections.append("<h3>Immediate Actions</h3>")
+            sections.append("<ul>")
+            for item in autonomy["immediate_actions"]:
+                sections.append(f"<li>{item}</li>")
+            sections.append("</ul>")
+
+        if autonomy.get("automation_opportunities"):
+            sections.append("<h3>Automation Opportunities</h3>")
+            sections.append("<ul>")
+            for item in autonomy["automation_opportunities"]:
+                sections.append(f"<li>{item}</li>")
+            sections.append("</ul>")
+
+        if autonomy.get("monitoring"):
+            sections.append("<h3>Monitoring Watchlist</h3>")
+            sections.append("<ul>")
+            for item in autonomy["monitoring"]:
+                sections.append(f"<li>{item}</li>")
+            sections.append("</ul>")
+
+        agents = autonomy.get("agents") or []
+        if agents:
+            sections.append("<h3>Agent Roster</h3>")
+            agent_rows = []
+            for agent in agents:
+                agent_rows.append(
+                    {
+                        "Agent": agent.get("name"),
+                        "Status": agent.get("status"),
+                        "Description": agent.get("description"),
+                        "Triggers": ", ".join(agent.get("triggers", [])),
+                        "Next Steps": ", ".join(agent.get("next_steps", [])),
+                    }
+                )
+            sections.append(pd.DataFrame(agent_rows).to_html(index=False))
+
     history_path = Path("reports/run_history.csv")
     if history_path.exists():
         try:
