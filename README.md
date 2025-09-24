@@ -47,7 +47,7 @@ A modern, robust KPI dashboard for tyre production analytics. All data is loaded
 
 3. Copy `.env.example` to `.env` and populate the Google Drive, OpenAI,
    CopilotKit, and Tongyi settings required for your deployment.
-4. Run the pipelines or Streamlit dashboards as described below.
+4. Run the unified CLI to sync data, execute pipelines, or launch services (details below).
 
 ## Folder Structure
 - `app.py` — Main entry point
@@ -61,9 +61,9 @@ A modern, robust KPI dashboard for tyre production analytics. All data is loaded
 ## Usage
 1. Copy `.env.example` to `.env` and fill in any API keys (OpenAI, Gemini, GitHub) and `GOOGLE_DRIVE_FOLDER_IDS` (comma-separated list of folder IDs). Optionally map friendly plant names via `GOOGLE_DRIVE_FOLDER_ALIASES` using `folder-id=Label` pairs.
 2. Download Google API credentials and save as `credentials.json` (not tracked; see `credentials_sample.json` for format).
-3. Run the full pipeline once: `python -m helpers.pipeline_runner <path> [<path> ...]` where each path can be a file or a directory; directories are scanned recursively. The Drive watcher can also trigger it automatically.
-4. Start the Drive watcher: `python helpers/drive_watcher.py` (runs continuously and computes KPIs, claim metrics, and document extracts for all configured folders)
-5. Run the app: `streamlit run app.py`
+3. Run the full pipeline once via the CLI or module entrypoint: `python cli.py pipeline data` (defaults to the `data/` directory). You can still call the module directly with `python -m helpers.pipeline_runner <path> [<path> ...]` when you need fine-grained control.
+4. Start the Drive watcher through the CLI (`python cli.py watch`) or directly with `python helpers/drive_watcher.py`. The `--run-once` flag triggers a single sync + pipeline pass for smoke tests.
+5. Run the app: `python cli.py dashboard` (wraps `streamlit run app.py` with sensible defaults).
 6. Start on the **🚀 InsightFactory Control Center** home page to confirm the latest run status, system health, recent history, and quick navigation to deeper dashboards.
    The freshness banner highlights when analytics are stale and need a rerun.
 7. Visit the **🏠 Executive Overview** page for a curated leadership view of hero metrics, trend charts, health signals, and next best actions.
@@ -72,6 +72,30 @@ A modern, robust KPI dashboard for tyre production analytics. All data is loaded
 10. Visit the **Autonomy Plan** tab inside the Pipeline Summary to review immediate actions, automation opportunities, and the status of the autonomous agents orchestrating the pipelines.
 11. Use the **Data Intake** tab inside the Pipeline Summary to explore file profiling, detected granularities, per-source coverage, run duration, and generated report artifacts.
 12. All analytics are auto-updated from your Drive folders with results stored in `reports/` (JSON, HTML, CSV history, document extracts).
+
+## Command-line Orchestration
+
+Use the new `cli.py` control center to manage pipelines, syncing, and services without remembering individual module paths:
+
+```bash
+# Sync Drive folders configured in GOOGLE_DRIVE_FOLDER_IDS
+python cli.py sync
+
+# Run the analytics pipeline against the ./data directory (default)
+python cli.py pipeline
+
+# Watch Drive for changes, running the pipeline whenever new files appear
+python cli.py watch
+
+# Launch the FastAPI gateway and Streamlit dashboard
+python cli.py serve-api --port 8080
+python cli.py dashboard
+
+# Check which artifacts were produced during the last run
+python cli.py status
+```
+
+Flags such as `--folder` allow you to override Drive folders at runtime, while `--run-once` on `watch` performs a single sync + pipeline loop for staging smoke tests. All commands respect the configured `REPORTS_DIR`, so artifacts stay aligned with the API and dashboards.
 
 ## REST API
 - Launch the FastAPI service with `uvicorn api:app --reload` to expose read-only ERP-friendly endpoints.
