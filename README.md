@@ -31,6 +31,24 @@ A modern, robust KPI dashboard for tyre production analytics. All data is loaded
 - Unified pipeline runner coordinates KPI, claim, and document processing for easy reuse
 - Automatically derives Overall Equipment Effectiveness (OEE) and first-pass yield (FPY) when raw production columns are present
 
+## Quickstart
+
+1. Create and activate a virtual environment (recommended).
+2. Install all project dependencies:
+
+   ```bash
+   pip install -r requirements.txt
+   ```
+
+   The suite now depends on FastAPI for the REST gateway alongside the
+   Streamlit dashboards and analytics helpers, so installing the full
+   requirements set keeps both interfaces working and ensures the test
+   suite imports succeed.
+
+3. Copy `.env.example` to `.env` and populate the Google Drive, OpenAI,
+   CopilotKit, and Tongyi settings required for your deployment.
+4. Run the pipelines or Streamlit dashboards as described below.
+
 ## Folder Structure
 - `app.py` — Main entry point
 - `pages/` — Streamlit multipage app
