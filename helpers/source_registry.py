@@ -8,8 +8,10 @@ import json
 import re
 from typing import Any, Dict, Iterable, List
 
+from config import REPORTS_DIR
 
-SNAPSHOT_PATH = Path("reports/latest_sources.json")
+
+SNAPSHOT_PATH = REPORTS_DIR / "latest_sources.json"
 
 
 def slugify_label(label: str) -> str:

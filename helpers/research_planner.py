@@ -11,6 +11,7 @@ from helpers.integration_clients import (
     IntegrationResult,
     TongyiDeepResearchClient,
 )
+from helpers.serialization import to_serializable
 
 
 @dataclass
@@ -97,13 +98,15 @@ class ResearchPlanner:
         def _result_to_dict(result: IntegrationResult) -> Dict[str, object]:
             return result.to_dict()
 
+        sanitized_summary = to_serializable(summary)
+
         copilotkit_result = (
-            self._copilotkit_client.request_brief(summary)
+            self._copilotkit_client.request_brief(sanitized_summary)
             if self._copilotkit_client.enabled
             else IntegrationResult(status="disabled")
         )
         deep_research_result = (
-            self._deep_research_client.request_research(summary)
+            self._deep_research_client.request_research(sanitized_summary)
             if self._deep_research_client.enabled
             else IntegrationResult(status="disabled")
         )

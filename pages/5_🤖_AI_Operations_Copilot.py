@@ -4,13 +4,16 @@ from pathlib import Path
 import streamlit as st
 
 from helpers.research_planner import ResearchPlanner
+from config import REPORTS_DIR
 
 st.set_page_config(page_title="AI Operations Copilot", layout="wide")
 st.title("🤖 AI Operations Copilot")
 
-summary_path = Path("reports/latest_summary.json")
+summary_path = REPORTS_DIR / "latest_summary.json"
 if not summary_path.exists():
-    st.warning("Run the unified pipeline to generate `reports/latest_summary.json`.")
+    st.warning(
+        f"Run the unified pipeline to generate `{summary_path}`."
+    )
     st.stop()
 
 summary = json.loads(summary_path.read_text(encoding="utf-8"))

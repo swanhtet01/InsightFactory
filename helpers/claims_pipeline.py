@@ -3,6 +3,8 @@ from typing import List
 import os
 import pandas as pd
 
+from config import REPORTS_DIR
+
 
 def compute_claim_metrics(files: List[str]) -> dict:
     claim_files = [
@@ -26,7 +28,8 @@ def compute_claim_metrics(files: List[str]) -> dict:
     metrics = {'total_claims': len(df)}
     if 'amount' in df.columns:
         metrics['total_claim_amount'] = df['amount'].sum()
-    os.makedirs('reports', exist_ok=True)
-    pd.DataFrame([metrics]).to_csv('reports/latest_claim_metrics.csv', index=False)
-    print('Saved claim metrics to reports/latest_claim_metrics.csv')
+    REPORTS_DIR.mkdir(parents=True, exist_ok=True)
+    output = REPORTS_DIR / 'latest_claim_metrics.csv'
+    pd.DataFrame([metrics]).to_csv(output, index=False)
+    print(f'Saved claim metrics to {output}')
     return metrics

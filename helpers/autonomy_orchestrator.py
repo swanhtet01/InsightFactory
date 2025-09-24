@@ -4,6 +4,8 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Any, Dict, List, Optional
 
+from config import REPORTS_DIR
+
 
 @dataclass
 class AgentStatus:
@@ -79,7 +81,7 @@ def _agent_status(summary: Dict[str, Any]) -> List[Dict[str, Any]]:
             description="Projects future KPI levels using the latest run history to keep teams ahead of emerging risks.",
             triggers=[
                 "Completion of pipeline runs",
-                "New rows appended to reports/run_history.csv",
+                f"New rows appended to {REPORTS_DIR / 'run_history.csv'}",
             ],
             next_steps=[
                 "Automate post-run notifications that include forecast deltas.",

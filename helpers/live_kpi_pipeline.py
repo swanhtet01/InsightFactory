@@ -1,7 +1,8 @@
 """Compute KPIs from newly synced data files."""
 from typing import List
-import os
 import pandas as pd
+
+from config import REPORTS_DIR
 from helpers.kpi_engine import KPIAgent
 
 
@@ -32,7 +33,8 @@ def compute_kpis_for_files(files: List[str]) -> dict:
     combined = pd.concat(frames, ignore_index=True)
     agent = KPIAgent()
     kpis = agent.compute_kpis(combined)
-    os.makedirs("reports", exist_ok=True)
-    pd.DataFrame([kpis]).to_csv("reports/latest_kpis.csv", index=False)
-    print("Saved KPIs to reports/latest_kpis.csv")
+    REPORTS_DIR.mkdir(parents=True, exist_ok=True)
+    output = REPORTS_DIR / "latest_kpis.csv"
+    pd.DataFrame([kpis]).to_csv(output, index=False)
+    print(f"Saved KPIs to {output}")
     return kpis

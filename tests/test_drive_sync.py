@@ -1,4 +1,5 @@
 import json
+import importlib
 import os
 import shutil
 import tempfile
@@ -6,7 +7,8 @@ import unittest
 from pathlib import Path
 from unittest.mock import ANY, patch
 
-from helpers.drive_sync import sync_drive_files
+import config
+from helpers import drive_sync, source_registry
 
 
 class TestDriveSync(unittest.TestCase):
@@ -14,10 +16,16 @@ class TestDriveSync(unittest.TestCase):
         self.repo_cwd = os.getcwd()
         self.tmpdir = tempfile.mkdtemp()
         os.chdir(self.tmpdir)
+        self.reports_dir = Path(self.tmpdir) / "drive_reports"
+        os.environ["REPORTS_DIR"] = str(self.reports_dir)
+
+        for module in [config, source_registry, drive_sync]:
+            importlib.reload(module)
 
     def tearDown(self) -> None:
         os.chdir(self.repo_cwd)
         shutil.rmtree(self.tmpdir)
+        os.environ.pop("REPORTS_DIR", None)
 
     @patch("helpers.drive_sync.download_file")
     @patch("helpers.drive_sync.list_files_in_folder")
@@ -27,7 +35,7 @@ class TestDriveSync(unittest.TestCase):
             [{"id": "2", "name": "b.png", "mimeType": "image/png"}],
         ]
 
-        files = sync_drive_files(["id1", "id2"])
+        files = drive_sync.sync_drive_files(["id1", "id2"])
 
         self.assertEqual(
             set(files),
@@ -37,7 +45,7 @@ class TestDriveSync(unittest.TestCase):
         list_files_mock.assert_any_call("id1", ANY)
         list_files_mock.assert_any_call("id2", ANY)
 
-        snapshot_path = Path("reports/latest_sources.json")
+        snapshot_path = self.reports_dir / "latest_sources.json"
         self.assertTrue(snapshot_path.exists())
         snapshot = json.loads(snapshot_path.read_text(encoding="utf-8"))
         self.assertEqual(snapshot.get("total_files"), 2)

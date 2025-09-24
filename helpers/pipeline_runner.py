@@ -8,6 +8,7 @@ import json
 import os
 import time
 
+from config import REPORTS_DIR
 from helpers.claims_pipeline import compute_claim_metrics
 from helpers.document_processor import process_documents
 from helpers.live_kpi_pipeline import compute_kpis_for_files
@@ -19,6 +20,7 @@ from helpers.autonomy_orchestrator import generate_autonomy_plan
 from helpers.data_profiler import profile_files
 from helpers.source_registry import load_latest_sync
 from helpers.health_evaluator import evaluate_system_health
+from helpers.serialization import to_serializable
 
 
 EXCLUDED_DIR_NAMES = {
@@ -31,6 +33,8 @@ EXCLUDED_DIR_NAMES = {
     "venv",
     ".venv",
 }
+
+EXCLUDED_DIR_NAMES.add(REPORTS_DIR.name.lower())
 
 EXCLUDED_SUFFIXES = {".pyc", ".pyo", ".tmp"}
 
@@ -88,15 +92,15 @@ def run_full_pipeline(files: List[str]) -> Dict[str, Dict]:
     results["system_health"] = evaluate_system_health(results)
 
     if any(results.values()):
-        os.makedirs("reports", exist_ok=True)
+        REPORTS_DIR.mkdir(parents=True, exist_ok=True)
 
-        outputs = []
+        outputs: List[str] = []
         if results.get("kpis"):
-            outputs.append("reports/latest_kpis.csv")
+            outputs.append(str(REPORTS_DIR / "latest_kpis.csv"))
         if results.get("claim_metrics"):
-            outputs.append("reports/latest_claim_metrics.csv")
+            outputs.append(str(REPORTS_DIR / "latest_claim_metrics.csv"))
         if results.get("document_metrics"):
-            outputs.append("reports/latest_docs.txt")
+            outputs.append(str(REPORTS_DIR / "latest_docs.txt"))
 
         duration = time.perf_counter() - started_clock
         results["run_metadata"] = {
@@ -116,11 +120,11 @@ def run_full_pipeline(files: List[str]) -> Dict[str, Dict]:
                 source_snapshot.get("folders", [])
             )
 
-        outputs.append("reports/run_history.csv")
+        outputs.append(str(REPORTS_DIR / "run_history.csv"))
         outputs.extend(
             [
-                "reports/latest_summary.json",
-                "reports/latest_summary.html",
+                str(REPORTS_DIR / "latest_summary.json"),
+                str(REPORTS_DIR / "latest_summary.html"),
             ]
         )
         pending_row = flatten_summary(results)
@@ -130,21 +134,9 @@ def run_full_pipeline(files: List[str]) -> Dict[str, Dict]:
         results["autonomy_plan"] = generate_autonomy_plan(results)
         results["run_metadata"]["reports_written"] = sorted(set(outputs))
         record_run(results)
-
-        def _to_serializable(obj):
-            if isinstance(obj, dict):
-                return {k: _to_serializable(v) for k, v in obj.items()}
-            if isinstance(obj, list):
-                return [_to_serializable(v) for v in obj]
-            if hasattr(obj, "item"):
-                try:
-                    return obj.item()
-                except Exception:
-                    return str(obj)
-            return obj
-
-        with open("reports/latest_summary.json", "w", encoding="utf-8") as fh:
-            json.dump(_to_serializable(results), fh, indent=2)
+        summary_path = REPORTS_DIR / "latest_summary.json"
+        with summary_path.open("w", encoding="utf-8") as fh:
+            json.dump(to_serializable(results), fh, indent=2)
         write_html_report(results)
     return results
 

@@ -1,8 +1,9 @@
 """Generate a simple HTML report from pipeline summary data."""
 from typing import Dict, Any, Iterable
-import os
 from pathlib import Path
 import pandas as pd
+
+from config import REPORTS_DIR
 
 
 def _format_value(value: Any, unit: str) -> str:
@@ -17,7 +18,7 @@ def _format_value(value: Any, unit: str) -> str:
     return str(value)
 
 
-def write_html_report(summary: Dict, path: str = "reports/latest_summary.html") -> None:
+def write_html_report(summary: Dict, path: str | Path | None = None) -> None:
     """Write an HTML report for the provided summary metrics.
 
     Parameters
@@ -27,8 +28,8 @@ def write_html_report(summary: Dict, path: str = "reports/latest_summary.html") 
     path:
         Output HTML file path.
     """
-    output = Path(path)
-    os.makedirs(output.parent, exist_ok=True)
+    output = Path(path) if path else REPORTS_DIR / "latest_summary.html"
+    output.parent.mkdir(parents=True, exist_ok=True)
 
     sections = ["<html>", "<body>", "<h1>Pipeline Summary</h1>"]
 
@@ -320,7 +321,7 @@ def write_html_report(summary: Dict, path: str = "reports/latest_summary.html") 
                 )
             sections.append(pd.DataFrame(agent_rows).to_html(index=False))
 
-    history_path = Path("reports/run_history.csv")
+    history_path = REPORTS_DIR / "run_history.csv"
     if history_path.exists():
         try:
             history_df = pd.read_csv(history_path)

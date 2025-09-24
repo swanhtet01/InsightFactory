@@ -6,6 +6,8 @@ from typing import Any, Dict, Optional
 
 import requests
 
+from helpers.serialization import to_serializable
+
 
 @dataclass
 class IntegrationResult:
@@ -107,7 +109,7 @@ class CopilotKitClient(_BaseClient):
         )
 
     def request_brief(self, summary: Dict[str, Any]) -> IntegrationResult:
-        payload = {"summary": summary, "source": "InsightFactory"}
+        payload = {"summary": to_serializable(summary), "source": "InsightFactory"}
         return self._post(payload)
 
 
@@ -132,7 +134,7 @@ class TongyiDeepResearchClient(_BaseClient):
         )
 
     def request_research(self, summary: Dict[str, Any]) -> IntegrationResult:
-        payload = {"summary": summary, "mode": "manufacturing-ops"}
+        payload = {"summary": to_serializable(summary), "mode": "manufacturing-ops"}
         return self._post(payload)
 
 

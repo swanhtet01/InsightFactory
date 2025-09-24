@@ -1,5 +1,14 @@
+import json
 import unittest
-from helpers.integration_clients import IntegrationResult
+from unittest.mock import Mock
+
+import numpy as np
+
+from helpers.integration_clients import (
+    IntegrationResult,
+    CopilotKitClient,
+    TongyiDeepResearchClient,
+)
 from helpers.research_planner import ResearchPlanner, IntegrationConfig
 
 
@@ -53,6 +62,52 @@ class ResearchPlannerTest(unittest.TestCase):
         self.assertIn("generated_at", insights["metadata"])
         self.assertEqual(insights["integrations"]["copilotkit"]["status"], "ok")
         self.assertEqual(insights["integrations"]["deep_research"]["status"], "ok")
+
+    def test_integration_payloads_are_json_serializable(self) -> None:
+        copilot_session = Mock()
+        copilot_response = Mock()
+        copilot_response.raise_for_status.return_value = None
+        copilot_response.json.return_value = {"ok": True}
+        copilot_session.post.return_value = copilot_response
+
+        deep_session = Mock()
+        deep_response = Mock()
+        deep_response.raise_for_status.return_value = None
+        deep_response.json.return_value = {"ok": True}
+        deep_session.post.return_value = deep_response
+
+        copilot_client = CopilotKitClient(
+            api_base="https://copilot",
+            session=copilot_session,
+        )
+        deep_client = TongyiDeepResearchClient(
+            api_base="https://deepresearch",
+            session=deep_session,
+        )
+
+        planner = ResearchPlanner(
+            copilotkit=IntegrationConfig(name="CopilotKit", api_base="https://copilot"),
+            deep_research=IntegrationConfig(name="DeepResearch", api_base="https://deepresearch"),
+            copilotkit_client=copilot_client,
+            deep_research_client=deep_client,
+        )
+
+        summary = {
+            "kpis": {"oee": np.float64(0.85)},
+            "claim_metrics": {"owners": {"ops", "finance"}},
+            "document_metrics": {"last_updated": np.datetime64("2024-01-01")},
+        }
+
+        planner.generate_insights(summary)
+
+        copilot_payload = copilot_session.post.call_args.kwargs["json"]
+        deep_payload = deep_session.post.call_args.kwargs["json"]
+
+        json.dumps(copilot_payload)
+        json.dumps(deep_payload)
+
+        self.assertIsInstance(copilot_payload["summary"], dict)
+        self.assertIsInstance(deep_payload["summary"], dict)
 
 
 if __name__ == "__main__":  # pragma: no cover

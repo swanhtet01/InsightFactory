@@ -8,10 +8,11 @@ import pandas as pd
 import plotly.express as px
 import streamlit as st
 
+from config import REPORTS_DIR
 st.set_page_config(page_title="Operations Command Center", layout="wide")
 st.title("📊 Operations Command Center")
 
-history_path = Path("reports/run_history.csv")
+history_path = REPORTS_DIR / "run_history.csv"
 if not history_path.exists():
     st.info("Run the pipeline to populate the operations command center.")
     st.stop()
@@ -25,7 +26,7 @@ if history.empty:
     st.info("History is empty. Execute the pipeline to generate metrics.")
     st.stop()
 
-latest_summary_path = Path("reports/latest_summary.json")
+latest_summary_path = REPORTS_DIR / "latest_summary.json"
 latest_summary = {}
 if latest_summary_path.exists():
     with latest_summary_path.open(encoding="utf-8") as fh:

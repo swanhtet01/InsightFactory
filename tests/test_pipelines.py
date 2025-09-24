@@ -1,3 +1,4 @@
+import importlib
 import json
 import os
 import shutil
@@ -7,12 +8,19 @@ import unittest
 
 import pandas as pd
 
-from helpers.document_processor import process_documents
-from helpers.claims_pipeline import compute_claim_metrics
-from helpers.live_kpi_pipeline import compute_kpis_for_files
-from helpers.pipeline_runner import run_full_pipeline, collect_files
-from helpers.source_registry import record_sync_snapshot
-from helpers.performance_analyzer import generate_performance_insights
+import config
+from helpers import (
+    document_processor,
+    claims_pipeline,
+    live_kpi_pipeline,
+    pipeline_runner,
+    source_registry,
+    performance_analyzer,
+    run_history,
+    html_report,
+    integration_clients,
+    research_planner,
+)
 
 
 def create_png(path: Path, text: str) -> None:
@@ -29,10 +37,28 @@ class TestPipelines(unittest.TestCase):
         self.repo_cwd = os.getcwd()
         self.tmpdir = tempfile.mkdtemp()
         os.chdir(self.tmpdir)
+        self.reports_dir = Path(self.tmpdir) / "custom_reports"
+        os.environ["REPORTS_DIR"] = str(self.reports_dir)
+
+        for module in [
+            config,
+            document_processor,
+            claims_pipeline,
+            live_kpi_pipeline,
+            run_history,
+            html_report,
+            integration_clients,
+            research_planner,
+            source_registry,
+            performance_analyzer,
+            pipeline_runner,
+        ]:
+            importlib.reload(module)
 
     def tearDown(self) -> None:
         os.chdir(self.repo_cwd)
         shutil.rmtree(self.tmpdir)
+        os.environ.pop("REPORTS_DIR", None)
 
     def test_document_processor(self) -> None:
         txt = Path("sample.txt")
@@ -40,11 +66,11 @@ class TestPipelines(unittest.TestCase):
         txt.write_text("Hello TXT", encoding="utf-8")
         create_png(img, "Hello Image")
 
-        process_documents([str(txt), str(img)])
-        out = Path("reports/latest_docs.txt")
+        document_processor.process_documents([str(txt), str(img)])
+        out = self.reports_dir / "latest_docs.txt"
         self.assertTrue(out.exists())
         content = out.read_text(encoding="utf-8")
-        metrics_path = Path("reports/latest_doc_metrics.csv")
+        metrics_path = self.reports_dir / "latest_doc_metrics.csv"
         self.assertTrue(metrics_path.exists())
         metrics_df = pd.read_csv(metrics_path)
 
@@ -68,11 +94,11 @@ class TestPipelines(unittest.TestCase):
             encoding="utf-8",
         )
 
-        compute_claim_metrics([str(claim)])
-        compute_kpis_for_files([str(kpi)])
+        claims_pipeline.compute_claim_metrics([str(claim)])
+        live_kpi_pipeline.compute_kpis_for_files([str(kpi)])
 
-        claim_out = Path("reports/latest_claim_metrics.csv")
-        kpi_out = Path("reports/latest_kpis.csv")
+        claim_out = self.reports_dir / "latest_claim_metrics.csv"
+        kpi_out = self.reports_dir / "latest_kpis.csv"
         self.assertTrue(claim_out.exists())
         self.assertTrue(kpi_out.exists())
 
@@ -104,7 +130,7 @@ class TestPipelines(unittest.TestCase):
             encoding="utf-8",
         )
 
-        record_sync_snapshot(
+        source_registry.record_sync_snapshot(
             [
                 {
                     "folder_id": "plant-a",
@@ -133,9 +159,9 @@ class TestPipelines(unittest.TestCase):
             ]
         )
 
-        run_full_pipeline(collect_files(["."]))
+        pipeline_runner.run_full_pipeline(pipeline_runner.collect_files(["."]))
 
-        summary = Path("reports/latest_summary.json")
+        summary = self.reports_dir / "latest_summary.json"
         self.assertTrue(summary.exists())
         data = json.loads(summary.read_text(encoding="utf-8"))
         self.assertIn("kpis", data)
@@ -159,7 +185,8 @@ class TestPipelines(unittest.TestCase):
 
         metadata = data["run_metadata"]
         self.assertIn("duration_seconds", metadata)
-        self.assertIn("reports/latest_summary.html", metadata["reports_written"])
+        expected_html_entry = str(self.reports_dir / "latest_summary.html")
+        self.assertIn(expected_html_entry, metadata["reports_written"])
         self.assertEqual(metadata.get("sources_tracked"), 2)
         self.assertEqual(metadata.get("health_status"), data["system_health"].get("status"))
 
@@ -182,7 +209,7 @@ class TestPipelines(unittest.TestCase):
         self.assertIn("agents", autonomy)
         self.assertTrue(autonomy["agents"])
 
-        html = Path("reports/latest_summary.html")
+        html = self.reports_dir / "latest_summary.html"
         self.assertTrue(html.exists())
         html_content = html.read_text(encoding="utf-8")
         self.assertIn("Pipeline Summary", html_content)
@@ -192,7 +219,7 @@ class TestPipelines(unittest.TestCase):
         self.assertIn("Run Metadata", html_content)
         self.assertIn("Autonomous Operations Plan", html_content)
 
-        history = Path("reports/run_history.csv")
+        history = self.reports_dir / "run_history.csv"
         self.assertTrue(history.exists())
         history_df = pd.read_csv(history)
         self.assertGreaterEqual(len(history_df), 1)
@@ -204,7 +231,7 @@ class TestPipelines(unittest.TestCase):
         self.assertIn("system_health_status", history_df.columns)
 
         initial_rows = len(history_df)
-        run_full_pipeline(collect_files(["."]))
+        pipeline_runner.run_full_pipeline(pipeline_runner.collect_files(["."]))
         updated_history = pd.read_csv(history)
         self.assertGreater(len(updated_history), initial_rows)
 
@@ -229,13 +256,13 @@ class TestPipelines(unittest.TestCase):
         txt.write_text("Hello", encoding="utf-8")
         create_png(img, "Hello")
 
-        files = collect_files(["."])
+        files = pipeline_runner.collect_files(["."])
         self.assertIn(str(txt), files)
         self.assertIn(str(img), files)
         self.assertNotIn(str(generated), files)
 
     def test_performance_insights_generation(self) -> None:
-        reports_dir = Path("reports")
+        reports_dir = self.reports_dir
         reports_dir.mkdir(exist_ok=True)
         history = pd.DataFrame(
             {
@@ -248,7 +275,9 @@ class TestPipelines(unittest.TestCase):
         )
         history.to_csv(reports_dir / "run_history.csv", index=False)
 
-        insights = generate_performance_insights({}, history_path=reports_dir / "run_history.csv")
+        insights = performance_analyzer.generate_performance_insights(
+            {}, history_path=self.reports_dir / "run_history.csv"
+        )
         self.assertIn("trends", insights)
         self.assertTrue(any(t["metric"] == "Overall Equipment Effectiveness" for t in insights["trends"]))
         self.assertIn("alerts", insights)

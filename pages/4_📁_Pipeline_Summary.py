@@ -7,10 +7,11 @@ import pandas as pd
 import plotly.express as px
 import streamlit as st
 
+from config import REPORTS_DIR
 st.set_page_config(page_title="Pipeline Summary", layout="wide")
 st.title("📁 Pipeline Summary")
 
-summary_path = Path("reports/latest_summary.json")
+summary_path = REPORTS_DIR / "latest_summary.json"
 if not summary_path.exists():
     st.warning("No summary report found. Run the pipeline first.")
     st.stop()
@@ -18,7 +19,7 @@ if not summary_path.exists():
 with summary_path.open(encoding="utf-8") as f:
     summary = json.load(f)
 
-history_path = Path("reports/run_history.csv")
+history_path = REPORTS_DIR / "run_history.csv"
 history_df = None
 if history_path.exists():
     history_df = pd.read_csv(history_path)
@@ -524,7 +525,7 @@ with tab_history:
         st.dataframe(history_df.tail(50), use_container_width=True)
 
 with tab_html:
-    html_path = Path("reports/latest_summary.html")
+    html_path = REPORTS_DIR / "latest_summary.html"
     if html_path.exists():
         html = html_path.read_text(encoding="utf-8")
         st.components.v1.html(html, height=400, scrolling=True)

@@ -9,6 +9,8 @@ except Exception:  # pragma: no cover - dependency optional
 from PIL import Image
 import pytesseract
 
+from config import REPORTS_DIR
+
 
 def _extract_text_from_file(path: str) -> str:
     if path.lower().endswith('.pdf'):
@@ -49,9 +51,10 @@ def process_documents(files: List[str]) -> dict:
             extracts.append(f"== {basename} ==\n{text.strip()}\n")
             metrics.append({"file": basename, "word_count": len(text.split())})
     if extracts:
-        os.makedirs('reports', exist_ok=True)
-        with open('reports/latest_docs.txt', 'w', encoding='utf-8') as fh:
-            fh.write('\n'.join(extracts))
-        pd.DataFrame(metrics).to_csv('reports/latest_doc_metrics.csv', index=False)
-        print('Saved document extracts to reports/latest_docs.txt')
+        REPORTS_DIR.mkdir(parents=True, exist_ok=True)
+        docs_path = REPORTS_DIR / 'latest_docs.txt'
+        metrics_path = REPORTS_DIR / 'latest_doc_metrics.csv'
+        docs_path.write_text('\n'.join(extracts), encoding='utf-8')
+        pd.DataFrame(metrics).to_csv(metrics_path, index=False)
+        print(f'Saved document extracts to {docs_path}')
     return {"documents_processed": len(metrics)}

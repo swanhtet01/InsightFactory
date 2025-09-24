@@ -8,7 +8,9 @@ import json
 
 import pandas as pd
 
-HISTORY_PATH = Path("reports/run_history.csv")
+from config import REPORTS_DIR
+
+HISTORY_PATH = REPORTS_DIR / "run_history.csv"
 
 
 def _normalize_value(value: Any) -> Any:
