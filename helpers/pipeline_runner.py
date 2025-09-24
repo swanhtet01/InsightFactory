@@ -16,6 +16,7 @@ from helpers.research_planner import ResearchPlanner
 from helpers.run_history import record_run
 from helpers.performance_analyzer import generate_performance_insights
 from helpers.data_profiler import profile_files
+from helpers.source_registry import load_latest_sync
 
 
 EXCLUDED_DIR_NAMES = {
@@ -70,8 +71,11 @@ def run_full_pipeline(files: List[str]) -> Dict[str, Dict]:
     results: Dict[str, Dict] = {}
 
     data_profile = profile_files(files)
+    source_snapshot = load_latest_sync()
     if data_profile:
         results["data_profile"] = data_profile
+    if source_snapshot:
+        results["data_sources"] = source_snapshot
 
     results["kpis"] = compute_kpis_for_files(files)
     results["claim_metrics"] = compute_claim_metrics(files)
@@ -98,6 +102,11 @@ def run_full_pipeline(files: List[str]) -> Dict[str, Dict]:
             "files_profiled": data_profile.get("files_profiled", 0) if data_profile else 0,
             "reports_written": [],
         }
+
+        if source_snapshot:
+            results["run_metadata"]["sources_tracked"] = len(
+                source_snapshot.get("folders", [])
+            )
 
         record_run(results)
         outputs.append("reports/run_history.csv")

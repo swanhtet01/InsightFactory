@@ -18,6 +18,7 @@ A modern, robust KPI dashboard for tyre production analytics. All data is loaded
 - HTML summary automatically includes the latest run history snapshot so audits have context without opening Streamlit
 - Each run is appended to `reports/run_history.csv` so dashboards can trend KPIs, claims, and document throughput over time
 - Automatic data intake profiling captures file counts, unreadable files, extension mix, volume, and detected granularities for every run
+- Drive sync snapshots capture per-folder file counts, contributors, and recent changes in `reports/latest_sources.json` so multi-plant coverage is transparent
 - Run metadata (duration, files processed, generated reports) is captured alongside analytics for auditable operations
 - Continuous improvement engine analyzes run history to surface KPI/claim/document trends, alerts, and volatility warnings for proactive action
 - AI research layer produces continuous improvement plans and integration steps for CopilotKit and Tongyi DeepResearch, including live API hand-offs when credentials are provided
@@ -35,14 +36,14 @@ A modern, robust KPI dashboard for tyre production analytics. All data is loaded
 - `config/` — Configuration files
 
 ## Usage
-1. Copy `.env.example` to `.env` and fill in any API keys (OpenAI, Gemini, GitHub) and `GOOGLE_DRIVE_FOLDER_IDS` (comma-separated list of folder IDs).
+1. Copy `.env.example` to `.env` and fill in any API keys (OpenAI, Gemini, GitHub) and `GOOGLE_DRIVE_FOLDER_IDS` (comma-separated list of folder IDs). Optionally map friendly plant names via `GOOGLE_DRIVE_FOLDER_ALIASES` using `folder-id=Label` pairs.
 2. Download Google API credentials and save as `credentials.json` (not tracked; see `credentials_sample.json` for format).
 3. Run the full pipeline once: `python -m helpers.pipeline_runner <path> [<path> ...]` where each path can be a file or a directory; directories are scanned recursively. The Drive watcher can also trigger it automatically.
 4. Start the Drive watcher: `python helpers/drive_watcher.py` (runs continuously and computes KPIs, claim metrics, and document extracts for all configured folders)
 5. Run the app: `streamlit run app.py`
 6. Visit the **📊 Operations Command Center** page to review run cadence, trend charts, and AI-driven action plans across plants. A new Files Profiled metric highlights ingestion health.
 7. Open the **📁 Pipeline Summary** page to inspect the latest KPI, claim, document, and data intake metrics alongside integration telemetry.
-8. Use the **Data Intake** tab inside the Pipeline Summary to explore file profiling, detected granularities, run duration, and generated report artifacts.
+8. Use the **Data Intake** tab inside the Pipeline Summary to explore file profiling, detected granularities, per-source coverage, run duration, and generated report artifacts.
 9. All analytics are auto-updated from your Drive folders with results stored in `reports/` (JSON, HTML, CSV history, document extracts).
 
 ## Dashboards

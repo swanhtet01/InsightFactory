@@ -99,6 +99,49 @@ def write_html_report(summary: Dict, path: str = "reports/latest_summary.html") 
             "Detected Granularity Tags",
         )
 
+    data_sources = summary.get("data_sources") or {}
+    folders = data_sources.get("folders") if isinstance(data_sources, dict) else None
+    if folders:
+        sections.append("<h2>Data Sources</h2>")
+        folder_rows = []
+        for folder in folders:
+            folder_rows.append(
+                {
+                    "Folder": folder.get("folder_label") or folder.get("folder_id"),
+                    "Files": folder.get("files", 0),
+                    "Latest Modified": folder.get("latest_modified"),
+                    "Earliest Modified": folder.get("earliest_modified"),
+                    "Contributors": ", ".join(folder.get("contributors", [])),
+                }
+            )
+        if folder_rows:
+            sections.append(pd.DataFrame(folder_rows).to_html(index=False))
+
+        entries = data_sources.get("entries", [])
+        if entries:
+            sections.append("<h3>Latest Files</h3>")
+            entry_df = pd.DataFrame(entries)
+            if not entry_df.empty:
+                if "modified_time" in entry_df.columns:
+                    entry_df = entry_df.sort_values("modified_time", ascending=False)
+                sections.append(
+                    entry_df[
+                        [
+                            col
+                            for col in [
+                                "name",
+                                "folder_label",
+                                "mime_type",
+                                "modified_time",
+                                "local_path",
+                            ]
+                            if col in entry_df.columns
+                        ]
+                    ]
+                    .head(10)
+                    .to_html(index=False)
+                )
+
     ai_research = summary.get("ai_research") or {}
     if ai_research:
         sections.append("<h2>AI Research Insights</h2>")

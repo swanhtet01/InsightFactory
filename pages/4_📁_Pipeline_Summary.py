@@ -28,6 +28,7 @@ kpis = summary.get("kpis", {})
 claims = summary.get("claim_metrics", {})
 documents = summary.get("document_metrics", {})
 data_profile = summary.get("data_profile", {})
+data_sources = summary.get("data_sources") or {}
 run_metadata = summary.get("run_metadata", {})
 ai_research = summary.get("ai_research") or {}
 performance = summary.get("performance_insights") or {}
@@ -215,9 +216,68 @@ with tab_data:
                 st.markdown("#### Detected Granularity Tags")
                 st.write(", ".join(data_profile["granularity_tags"]))
 
+        folders = data_sources.get("folders") if isinstance(data_sources, dict) else []
+        if folders:
+            st.markdown("### Source Coverage")
+            folder_df = pd.DataFrame(folders)
+            if not folder_df.empty:
+                display_df = folder_df.copy()
+                if "contributors" in display_df.columns:
+                    display_df["contributors"] = display_df["contributors"].apply(
+                        lambda value: ", ".join(value) if isinstance(value, list) else value
+                    )
+                display_df = display_df.rename(
+                    columns={
+                        "folder_label": "Folder",
+                        "files": "Files",
+                        "latest_modified": "Latest Modified",
+                        "earliest_modified": "Earliest Modified",
+                        "contributors": "Contributors",
+                    }
+                )
+                st.dataframe(
+                    display_df[
+                        [
+                            col
+                            for col in [
+                                "Folder",
+                                "Files",
+                                "Latest Modified",
+                                "Earliest Modified",
+                                "Contributors",
+                            ]
+                            if col in display_df.columns
+                        ]
+                    ],
+                    use_container_width=True,
+                )
+            entries = data_sources.get("entries", [])
+            if entries:
+                st.markdown("#### Latest Files")
+                entry_df = pd.DataFrame(entries)
+                if not entry_df.empty:
+                    if "modified_time" in entry_df.columns:
+                        entry_df = entry_df.sort_values("modified_time", ascending=False)
+                    st.dataframe(
+                        entry_df[
+                            [
+                                col
+                                for col in [
+                                    "name",
+                                    "folder_label",
+                                    "mime_type",
+                                    "modified_time",
+                                    "local_path",
+                                ]
+                                if col in entry_df.columns
+                            ]
+                        ].head(20),
+                        use_container_width=True,
+                    )
+
         if run_metadata:
             st.markdown("### Run Metadata")
-            meta_col1, meta_col2, meta_col3 = st.columns(3)
+            meta_col1, meta_col2, meta_col3, meta_col4 = st.columns(4)
             if run_metadata.get("duration_seconds") is not None:
                 meta_col1.metric(
                     "Duration (s)",
@@ -230,6 +290,11 @@ with tab_data:
             if run_metadata.get("files_profiled") is not None:
                 meta_col3.metric(
                     "Files Profiled", f"{int(run_metadata['files_profiled'])}"
+                )
+            if run_metadata.get("sources_tracked") is not None:
+                meta_col4.metric(
+                    "Sources Tracked",
+                    f"{int(run_metadata['sources_tracked'])}",
                 )
             if run_metadata.get("reports_written"):
                 st.markdown("#### Reports Written")

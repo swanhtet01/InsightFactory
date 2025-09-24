@@ -17,6 +17,31 @@ if not GOOGLE_DRIVE_FOLDER_IDS:
     fallback = os.getenv("GOOGLE_DRIVE_FOLDER_ID", "").strip()
     if fallback:
         GOOGLE_DRIVE_FOLDER_IDS = [fallback]
+
+
+def _parse_folder_aliases(raw: str) -> dict[str, str]:
+    mapping: dict[str, str] = {}
+    for chunk in raw.split(","):
+        if "=" not in chunk:
+            continue
+        key, value = chunk.split("=", 1)
+        key = key.strip()
+        value = value.strip()
+        if not key or not value:
+            continue
+        mapping[key] = value
+    return mapping
+
+
+GOOGLE_DRIVE_FOLDER_ALIASES = _parse_folder_aliases(
+    os.getenv("GOOGLE_DRIVE_FOLDER_ALIASES", "")
+)
+
+
+def resolve_drive_folder_label(folder_id: str) -> str:
+    """Return a human-readable label for a Drive folder."""
+
+    return GOOGLE_DRIVE_FOLDER_ALIASES.get(folder_id, folder_id)
 PROCESSED_DATA_PATH = "data/processed_data.json"
 REPORTS_PATH = "reports/exported_pdfs/"
 

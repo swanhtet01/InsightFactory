@@ -11,6 +11,7 @@ from helpers.document_processor import process_documents
 from helpers.claims_pipeline import compute_claim_metrics
 from helpers.live_kpi_pipeline import compute_kpis_for_files
 from helpers.pipeline_runner import run_full_pipeline, collect_files
+from helpers.source_registry import record_sync_snapshot
 from helpers.performance_analyzer import generate_performance_insights
 
 
@@ -103,6 +104,35 @@ class TestPipelines(unittest.TestCase):
             encoding="utf-8",
         )
 
+        record_sync_snapshot(
+            [
+                {
+                    "folder_id": "plant-a",
+                    "folder_label": "Plant A",
+                    "folder_slug": "plant_a",
+                    "file_id": "file-1",
+                    "name": "sample.txt",
+                    "mime_type": "text/plain",
+                    "local_path": str(txt.resolve()),
+                    "modified_time": "2024-01-01T00:00:00Z",
+                    "owners": [{"emailAddress": "ops@example.com"}],
+                    "last_modified_by": "ops@example.com",
+                },
+                {
+                    "folder_id": "plant-b",
+                    "folder_label": "Plant B",
+                    "folder_slug": "plant_b",
+                    "file_id": "file-2",
+                    "name": "claim.csv",
+                    "mime_type": "text/csv",
+                    "local_path": str(claim.resolve()),
+                    "modified_time": "2024-01-02T00:00:00Z",
+                    "owners": [{"displayName": "Planner"}],
+                    "last_modified_by": "planner@example.com",
+                },
+            ]
+        )
+
         run_full_pipeline(collect_files(["."]))
 
         summary = Path("reports/latest_summary.json")
@@ -113,6 +143,7 @@ class TestPipelines(unittest.TestCase):
         self.assertIn("document_metrics", data)
         self.assertIn("data_profile", data)
         self.assertIn("run_metadata", data)
+        self.assertIn("data_sources", data)
         self.assertIn("ai_research", data)
         self.assertIn("performance_insights", data)
         self.assertIn("oee", data["kpis"])
@@ -127,6 +158,12 @@ class TestPipelines(unittest.TestCase):
         metadata = data["run_metadata"]
         self.assertIn("duration_seconds", metadata)
         self.assertIn("reports/latest_summary.html", metadata["reports_written"])
+        self.assertEqual(metadata.get("sources_tracked"), 2)
+
+        sources = data["data_sources"]
+        self.assertEqual(sources.get("total_files"), 2)
+        folder_labels = {folder.get("folder_label") for folder in sources.get("folders", [])}
+        self.assertSetEqual(folder_labels, {"Plant A", "Plant B"})
 
         research = data["ai_research"]
         self.assertIn("next_actions", research)
