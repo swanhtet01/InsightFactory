@@ -25,6 +25,7 @@ A modern, robust KPI dashboard for tyre production analytics. All data is loaded
 - Continuous improvement engine analyzes run history to surface KPI/claim/document trends, alerts, and volatility warnings for proactive action
 - Forecast engine projects KPI trajectories and target attainment windows for forward-looking planning
 - Health scorecard synthesizes KPI, claim, document, and data intake context into an overall readiness score
+- Preflight readiness command validates environment configuration, dependencies, and report artifacts (writes `preflight_status.json`)
 - AI research layer produces continuous improvement plans and integration steps for CopilotKit and Tongyi DeepResearch, including live API hand-offs when credentials are provided
 - Autonomous operations planner recommends immediate actions, automation opportunities, and agent readiness so the system can self-steer
 - PDF parsing is optional; install `pdfminer.six` if your Drive contains PDFs
@@ -47,7 +48,9 @@ A modern, robust KPI dashboard for tyre production analytics. All data is loaded
 
 3. Copy `.env.example` to `.env` and populate the Google Drive, OpenAI,
    CopilotKit, and Tongyi settings required for your deployment.
-4. Run the unified CLI to sync data, execute pipelines, or launch services (details below).
+4. Validate the setup with `python cli.py preflight --json` to ensure
+   credentials, dependencies, and report directories are ready.
+5. Run the unified CLI to sync data, execute pipelines, or launch services (details below).
 
 ## Folder Structure
 - `app.py` — Main entry point
@@ -61,17 +64,18 @@ A modern, robust KPI dashboard for tyre production analytics. All data is loaded
 ## Usage
 1. Copy `.env.example` to `.env` and fill in any API keys (OpenAI, Gemini, GitHub) and `GOOGLE_DRIVE_FOLDER_IDS` (comma-separated list of folder IDs). Optionally map friendly plant names via `GOOGLE_DRIVE_FOLDER_ALIASES` using `folder-id=Label` pairs.
 2. Download Google API credentials and save as `credentials.json` (not tracked; see `credentials_sample.json` for format).
-3. Run the full pipeline once via the CLI or module entrypoint: `python cli.py pipeline data` (defaults to the `data/` directory). You can still call the module directly with `python -m helpers.pipeline_runner <path> [<path> ...]` when you need fine-grained control.
-4. Start the Drive watcher through the CLI (`python cli.py watch`) or directly with `python helpers/drive_watcher.py`. The `--run-once` flag triggers a single sync + pipeline pass for smoke tests.
-5. Run the app: `python cli.py dashboard` (wraps `streamlit run app.py` with sensible defaults).
-6. Start on the **🚀 InsightFactory Control Center** home page to confirm the latest run status, system health, recent history, and quick navigation to deeper dashboards.
+3. Validate the environment with `python cli.py preflight --json` to confirm dependencies, credentials, and report directories are ready before running workloads.
+4. Run the full pipeline once via the CLI or module entrypoint: `python cli.py pipeline data` (defaults to the `data/` directory). You can still call the module directly with `python -m helpers.pipeline_runner <path> [<path> ...]` when you need fine-grained control.
+5. Start the Drive watcher through the CLI (`python cli.py watch`) or directly with `python helpers/drive_watcher.py`. The `--run-once` flag triggers a single sync + pipeline pass for smoke tests.
+6. Run the app: `python cli.py dashboard` (wraps `streamlit run app.py` with sensible defaults).
+7. Start on the **🚀 InsightFactory Control Center** home page to confirm the latest run status, system health, recent history, and quick navigation to deeper dashboards.
    The freshness banner highlights when analytics are stale and need a rerun.
-7. Visit the **🏠 Executive Overview** page for a curated leadership view of hero metrics, trend charts, health signals, and next best actions.
-8. Visit the **📊 Operations Command Center** page to review run cadence, trend charts, and AI-driven action plans across plants. A new Files Profiled metric highlights ingestion health.
-9. Open the **📁 Pipeline Summary** page to inspect the latest KPI, claim, document, and data intake metrics alongside integration telemetry.
-10. Visit the **Autonomy Plan** tab inside the Pipeline Summary to review immediate actions, automation opportunities, and the status of the autonomous agents orchestrating the pipelines.
-11. Use the **Data Intake** tab inside the Pipeline Summary to explore file profiling, detected granularities, per-source coverage, run duration, and generated report artifacts.
-12. All analytics are auto-updated from your Drive folders with results stored in `reports/` (JSON, HTML, CSV history, document extracts).
+8. Visit the **🏠 Executive Overview** page for a curated leadership view of hero metrics, trend charts, health signals, and next best actions.
+9. Visit the **📊 Operations Command Center** page to review run cadence, trend charts, and AI-driven action plans across plants. A new Files Profiled metric highlights ingestion health.
+10. Open the **📁 Pipeline Summary** page to inspect the latest KPI, claim, document, and data intake metrics alongside integration telemetry.
+11. Visit the **Autonomy Plan** tab inside the Pipeline Summary to review immediate actions, automation opportunities, and the status of the autonomous agents orchestrating the pipelines.
+12. Use the **Data Intake** tab inside the Pipeline Summary to explore file profiling, detected granularities, per-source coverage, run duration, and generated report artifacts.
+13. All analytics are auto-updated from your Drive folders with results stored in `reports/` (JSON, HTML, CSV history, document extracts).
 
 ## Command-line Orchestration
 
@@ -80,6 +84,9 @@ Use the new `cli.py` control center to manage pipelines, syncing, and services w
 ```bash
 # Sync Drive folders configured in GOOGLE_DRIVE_FOLDER_IDS
 python cli.py sync
+
+# Validate environment configuration and generated artifacts
+python cli.py preflight --json
 
 # Run the analytics pipeline against the ./data directory (default)
 python cli.py pipeline

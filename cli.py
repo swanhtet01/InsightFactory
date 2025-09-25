@@ -10,7 +10,7 @@ from typing import List, Optional
 import typer
 
 from config import REPORTS_DIR, GOOGLE_DRIVE_FOLDER_IDS
-from helpers import drive_sync, drive_watcher, pipeline_runner
+from helpers import drive_sync, drive_watcher, pipeline_runner, system_check
 
 
 app = typer.Typer(help="Manage InsightFactory pipelines, syncing, and services.")
@@ -192,6 +192,70 @@ def status() -> None:
     typer.echo(
         "Dashboard payload present." if dashboard_path.exists() else "Dashboard payload missing."
     )
+
+
+@app.command()
+def preflight(
+    folder: List[str] = typer.Option(
+        None,
+        "--folder",
+        "-f",
+        help="Override configured Drive folder IDs when running checks.",
+    ),
+    credentials: Optional[Path] = typer.Option(
+        None,
+        "--credentials",
+        help="Path to the Google service account JSON (defaults to ./credentials.json).",
+    ),
+    reports_dir: Optional[Path] = typer.Option(
+        None,
+        "--reports-dir",
+        help="Directory containing generated reports (defaults to REPORTS_DIR).",
+    ),
+    json_output: bool = typer.Option(
+        False,
+        "--json",
+        help="Emit the preflight summary as JSON for automation scenarios.",
+    ),
+    write: bool = typer.Option(
+        False,
+        "--write",
+        help="Persist the preflight summary to reports/preflight_status.json.",
+    ),
+) -> None:
+    """Run environment and artifact readiness checks."""
+
+    folder_ids = _resolve_folders(folder)
+    resolved_reports = reports_dir.resolve() if reports_dir else None
+    resolved_credentials = credentials.resolve() if credentials else None
+
+    checks = system_check.collect_preflight_checks(
+        reports_dir=resolved_reports,
+        drive_folder_ids=folder_ids,
+        credentials_path=resolved_credentials,
+    )
+    summary = system_check.summarise_preflight(checks)
+
+    if json_output:
+        typer.echo(json.dumps(summary, indent=2))
+    else:
+        typer.echo(f"Overall preflight status: {summary['status'].upper()}")
+        typer.echo(
+            "Pass/Warning/Fail counts: "
+            f"{summary['counts']['pass']} / {summary['counts']['warn']} / {summary['counts']['fail']}"
+        )
+        typer.echo("")
+        for check in summary["checks"]:
+            typer.echo(f"[{check['status'].upper()}] {check['name']}: {check['message']}")
+            remediation = check.get("remediation")
+            if remediation:
+                typer.echo(f"    -> {remediation}")
+
+    if write:
+        destination = system_check.write_summary(summary, reports_dir=resolved_reports)
+        typer.echo(f"Preflight summary saved to {destination}")
+
+    raise typer.Exit(code=0 if summary["status"] != "fail" else 1)
 
 
 def main() -> None:  # pragma: no cover - click entrypoint

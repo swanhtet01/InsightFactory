@@ -107,3 +107,44 @@ def test_status_command_reports_artifacts(tmp_path, monkeypatch):
     assert "Latest summary available." in result.stdout
     assert "Run history entries: 1" in result.stdout
     assert "Dashboard payload present." in result.stdout
+
+
+def test_preflight_command_outputs_summary(monkeypatch):
+    received: dict[str, object] = {}
+    checks = [
+        cli.system_check.CheckResult("drive", "Drive", "pass", "configured"),
+        cli.system_check.CheckResult("reports", "Reports", "warn", "missing", "run pipeline"),
+    ]
+
+    def fake_collect(**kwargs):
+        received.update(kwargs)
+        return checks
+
+    def fake_summary(results):
+        assert results == checks
+        return {
+            "status": "warn",
+            "counts": {"pass": 1, "warn": 1, "fail": 0},
+            "checks": [check.to_dict() for check in checks],
+        }
+
+    saved_paths: list[Path] = []
+
+    def fake_write(summary, reports_dir=None):
+        saved = Path("/tmp/preflight.json")
+        saved_paths.append(saved)
+        return saved
+
+    monkeypatch.setattr(cli.system_check, "collect_preflight_checks", fake_collect)
+    monkeypatch.setattr(cli.system_check, "summarise_preflight", fake_summary)
+    monkeypatch.setattr(cli.system_check, "write_summary", fake_write)
+
+    result = runner.invoke(
+        cli.app,
+        ["preflight", "--folder", "demo", "--json", "--write"],
+    )
+
+    assert result.exit_code == 0
+    assert received["drive_folder_ids"] == ["demo"]
+    assert "\"status\": \"warn\"" in result.stdout
+    assert saved_paths, "preflight summary should be saved when --write is provided"
