@@ -4,6 +4,18 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
+
+def _expand_path(value: str | None, default: str) -> Path:
+    """Return an expanded path for environment configuration values."""
+
+    raw = (value or "").strip() or default
+    path = Path(raw).expanduser()
+    # Avoid resolve() when the file may not yet exist (first-run experience).
+    try:
+        return path.resolve()
+    except FileNotFoundError:
+        return path
+
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY", "")
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "")
 GITHUB_TOKEN = os.getenv("GITHUB_TOKEN", "")
@@ -13,7 +25,17 @@ INSIGHT_API_KEY_HEADER = os.getenv("INSIGHT_API_KEY_HEADER", "X-API-Key")
 _origins = [origin.strip() for origin in os.getenv("API_ALLOWED_ORIGINS", "*").split(",") if origin.strip()]
 API_ALLOWED_ORIGINS = _origins or ["*"]
 
-REPORTS_DIR = Path(os.getenv("REPORTS_DIR", "reports")).expanduser().resolve()
+REPORTS_DIR = _expand_path(os.getenv("REPORTS_DIR"), "reports")
+
+GOOGLE_CREDENTIALS_FILE = _expand_path(
+    os.getenv("GOOGLE_CREDENTIALS_FILE")
+    or os.getenv("GOOGLE_APPLICATION_CREDENTIALS"),
+    "credentials.json",
+)
+GOOGLE_TOKEN_FILE = _expand_path(os.getenv("GOOGLE_TOKEN_FILE"), "token.json")
+GOOGLE_IMPERSONATE_SUBJECT = (
+    os.getenv("GOOGLE_IMPERSONATE_SUBJECT", "").strip() or None
+)
 
 # Support multiple Drive folders via comma-separated environment variable.
 GOOGLE_DRIVE_FOLDER_IDS = [

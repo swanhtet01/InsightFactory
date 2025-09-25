@@ -63,8 +63,8 @@ A modern, robust KPI dashboard for tyre production analytics. All data is loaded
 
 ## Usage
 1. Copy `.env.example` to `.env` and fill in any API keys (OpenAI, Gemini, GitHub) and `GOOGLE_DRIVE_FOLDER_IDS` (comma-separated list of folder IDs). Optionally map friendly plant names via `GOOGLE_DRIVE_FOLDER_ALIASES` using `folder-id=Label` pairs.
-2. Download Google API credentials and save as `credentials.json` (not tracked; see `credentials_sample.json` for format).
-3. Validate the environment with `python cli.py preflight --json` to confirm dependencies, credentials, and report directories are ready before running workloads.
+2. Provide Google Drive API credentials (a service-account JSON is recommended for headless runs). Save the file as `credentials.json` or point `GOOGLE_CREDENTIALS_FILE`/`GOOGLE_APPLICATION_CREDENTIALS` to the location. If you need to impersonate a Workspace user, set `GOOGLE_IMPERSONATE_SUBJECT` in `.env`.
+3. Validate the environment with `python cli.py preflight --json` to confirm dependencies, credentials, and report directories are ready before running workloads. The Drive helper persists OAuth tokens to `GOOGLE_TOKEN_FILE` (default `token.json`) so repeat syncs run without reauthentication.
 4. Run the full pipeline once via the CLI or module entrypoint: `python cli.py pipeline data` (defaults to the `data/` directory). You can still call the module directly with `python -m helpers.pipeline_runner <path> [<path> ...]` when you need fine-grained control.
 5. Start the Drive watcher through the CLI (`python cli.py watch`) or directly with `python helpers/drive_watcher.py`. The `--run-once` flag triggers a single sync + pipeline pass for smoke tests.
 6. Run the app: `python cli.py dashboard` (wraps `streamlit run app.py` with sensible defaults).
