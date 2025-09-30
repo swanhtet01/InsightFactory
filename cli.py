@@ -95,6 +95,10 @@ def watch(
         False,
         help="Perform a single sync + pipeline pass instead of an infinite watch loop.",
     ),
+    sync_on_start: bool = typer.Option(
+        True,
+        help="Run an initial sync + pipeline cycle before watching for Drive changes.",
+    ),
 ) -> None:
     """Continuously monitor Drive folders and process updates."""
 
@@ -113,7 +117,11 @@ def watch(
         "Starting Drive watcher. Press Ctrl+C to stop. Polling interval: "
         f"{interval} second(s)."
     )
-    drive_watcher.watch_drive_folder(interval=interval, folder_ids=folder_ids)
+    drive_watcher.watch_drive_folder(
+        interval=interval,
+        folder_ids=folder_ids,
+        sync_on_start=sync_on_start,
+    )
 
 
 @app.command("serve-api")
