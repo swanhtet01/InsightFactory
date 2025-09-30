@@ -10,7 +10,13 @@ from typing import List, Optional
 import typer
 
 from config import REPORTS_DIR, GOOGLE_DRIVE_FOLDER_IDS
-from helpers import drive_sync, drive_watcher, pipeline_runner, system_check
+from helpers import (
+    drive_sync,
+    drive_watcher,
+    orchestrator,
+    pipeline_runner,
+    system_check,
+)
 
 
 app = typer.Typer(help="Manage InsightFactory pipelines, syncing, and services.")
@@ -264,6 +270,49 @@ def preflight(
         typer.echo(f"Preflight summary saved to {destination}")
 
     raise typer.Exit(code=0 if summary["status"] != "fail" else 1)
+
+
+@app.command()
+def stack(
+    interval: int = typer.Option(60, help="Polling interval for Drive watcher (seconds)."),
+    folder: List[str] = typer.Option(
+        None,
+        "--folder",
+        "-f",
+        help="Specific folder ID(s) to monitor. Defaults to configured folders.",
+    ),
+    sync_on_start: bool = typer.Option(
+        True,
+        help="Run an initial sync + pipeline cycle before monitoring for changes.",
+    ),
+    api_host: str = typer.Option("0.0.0.0", help="Host interface for FastAPI."),
+    api_port: int = typer.Option(8000, help="Port for FastAPI."),
+    api_reload: bool = typer.Option(False, help="Enable FastAPI autoreload (development)."),
+    dashboard_host: str = typer.Option("0.0.0.0", help="Streamlit server address."),
+    dashboard_port: int = typer.Option(8501, help="Streamlit server port."),
+    app_path: Path = typer.Option(Path("app.py"), help="Streamlit entry file."),
+    duration: Optional[float] = typer.Option(
+        None,
+        help="Optional number of seconds to keep the stack running (for smoke tests).",
+    ),
+) -> None:
+    """Launch Drive watcher, FastAPI, and Streamlit as a managed stack."""
+
+    folder_ids = _resolve_folders(folder)
+    typer.echo("Starting InsightFactory stack (watcher + API + dashboard)...")
+    orchestrator.run_stack(
+        interval=interval,
+        folder_ids=folder_ids,
+        sync_on_start=sync_on_start,
+        api_host=api_host,
+        api_port=api_port,
+        api_reload=api_reload,
+        dashboard_host=dashboard_host,
+        dashboard_port=dashboard_port,
+        app_path=app_path,
+        run_duration=duration,
+    )
+    typer.echo("Stack stopped cleanly.")
 
 
 def main() -> None:  # pragma: no cover - click entrypoint

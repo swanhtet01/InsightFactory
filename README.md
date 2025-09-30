@@ -85,6 +85,9 @@ Use the new `cli.py` control center to manage pipelines, syncing, and services w
 # Sync Drive folders configured in GOOGLE_DRIVE_FOLDER_IDS
 python cli.py sync
 
+# Run watcher, API, and dashboard together (Ctrl+C to stop)
+python cli.py stack
+
 # Validate environment configuration and generated artifacts
 python cli.py preflight --json
 
@@ -103,6 +106,8 @@ python cli.py status
 ```
 
 Flags such as `--folder` allow you to override Drive folders at runtime, while `--run-once` on `watch` performs a single sync + pipeline loop for staging smoke tests. All commands respect the configured `REPORTS_DIR`, so artifacts stay aligned with the API and dashboards.
+
+For automated checks you can run `python cli.py stack --duration 0` to boot the Drive watcher, API, and dashboard momentarily and verify the orchestrated stack starts without manual intervention.
 
 ## REST API
 - Launch the FastAPI service with `uvicorn api:app --reload` to expose read-only ERP-friendly endpoints.

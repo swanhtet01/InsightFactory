@@ -148,3 +148,38 @@ def test_preflight_command_outputs_summary(monkeypatch):
     assert received["drive_folder_ids"] == ["demo"]
     assert "\"status\": \"warn\"" in result.stdout
     assert saved_paths, "preflight summary should be saved when --write is provided"
+
+
+def test_stack_command_invokes_orchestrator(monkeypatch):
+    captured: dict[str, object] = {}
+
+    def fake_run_stack(**kwargs):
+        captured.update(kwargs)
+
+    monkeypatch.setattr(cli.orchestrator, "run_stack", fake_run_stack)
+
+    result = runner.invoke(
+        cli.app,
+        [
+            "stack",
+            "--interval",
+            "15",
+            "--folder",
+            "plant-123",
+            "--duration",
+            "0",
+            "--dashboard-port",
+            "8700",
+            "--api-port",
+            "9100",
+            "--no-sync-on-start",
+        ],
+    )
+
+    assert result.exit_code == 0
+    assert captured["interval"] == 15
+    assert captured["folder_ids"] == ["plant-123"]
+    assert captured["sync_on_start"] is False
+    assert captured["api_port"] == 9100
+    assert captured["dashboard_port"] == 8700
+    assert captured["run_duration"] == 0.0
